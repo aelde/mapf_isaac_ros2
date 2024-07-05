@@ -40,7 +40,30 @@ class AstarPathPlanner(Node):
             [10.5, 4.5, 0], [10.5, 7.5, 0], [10.5, 10.5, 0], [10.5, 13.5, 0],
             [10.5, 16.5, 0], [10.5, 19.5, 0], [10.5, 22.5, 0],
             [13.5, 4.5, 0], [13.5, 7.5, 0], [13.5, 10.5, 0], [13.5, 13.5, 0],
-            [13.5, 16.5, 0], [13.5, 19.5, 0], [13.5, 22.5, 0]
+            [13.5, 16.5, 0], [13.5, 19.5, 0], [13.5, 22.5, 0],
+            # frame bottom
+            [16.5, -25.5, 0], [16.5, -22.5, 0], [16.5, -19.5, 0], [16.5, -16.5, 0],
+            [16.5, -13.5, 0], [16.5, -10.5, 0], [16.5, -7.5, 0], [16.5, -4.5, 0],
+            [16.5, -1.5, 0], [16.5, 1.5, 0], [16.5, 4.5, 0], [16.5, 7.5, 0],
+            [16.5, 10.5, 0], [16.5, 13.5, 0], [16.5, 16.5, 0], [16.5, 19.5, 0],
+            [16.5, 22.5, 0], [16.5, 25.5, 0], [16.5, 28.5, 0],
+            # frame right
+            [16.5, 28.5, 0], [13.5, 28.5, 0], [10.5, 28.5, 0], [7.5, 28.5, 0],
+            [4.5, 28.5, 0], [1.5, 28.5, 0], [-1.5, 28.5, 0], [-4.5, 28.5, 0],
+            [-7.5, 28.5, 0], [-10.5, 28.5, 0], [-13.5, 28.5, 0], [-16.5, 28.5, 0],
+            [-19.5, 28.5, 0], [-22.5, 28.5, 0], [-25.5, 28.5, 0],
+            # frame top
+            [-16.5, 25.5, 0],  [-16.5, 22.5, 0],  [-16.5, 19.5, 0],  [-16.5, 16.5, 0],
+            [-16.5, 13.5, 0],  [-16.5, 10.5, 0],  [-16.5, 7.5, 0],   [-16.5, 4.5, 0],
+            [-16.5, 1.5, 0],   [-16.5, -1.5, 0],  [-16.5, -4.5, 0],  [-16.5, -7.5, 0],
+            [-16.5, -10.5, 0], [-16.5, -13.5, 0], [-16.5, -16.5, 0], [-16.5, -19.5, 0],
+            [-16.5, -22.5, 0], [-16.5, -25.5, 0], [-16.5, -28.5, 0],
+            # frame left
+            [-25.5, -28.5, 0], [-22.5, -28.5, 0], [-19.5, -28.5, 0], [-16.5, -28.5, 0],
+            [-13.5, -28.5, 0], [-10.5, -28.5, 0], [-7.5, -28.5, 0], [-4.5, -28.5, 0],
+            [-1.5, -28.5, 0], [1.5, -28.5, 0], [4.5, -28.5, 0], [7.5, -28.5, 0],
+            [10.5, -28.5, 0], [13.5, -28.5, 0], [16.5, -28.5, 0], [19.5, -28.5, 0],
+            [22.5, -28.5, 0], [25.5, -28.5, 0], [28.5, -28.5, 0],
         ])
         
     def visualize_astar_path(self, tb_id, start_pos, goal_pos, current, open_set, closed_set, g_score, f_score, came_from, step):
@@ -63,7 +86,9 @@ class AstarPathPlanner(Node):
         ax.scatter(goal_pos[1], goal_pos[0], c='m', marker='*', s=200, label='Goal')
         
         # Plot open and closed sets
-        open_set_coords = np.array([pos for _, pos in open_set])
+        # open_set_coords = np.array([pos for _, pos in open_set])
+        open_set_coords = np.array([pos for _, _, pos in open_set])
+        
         closed_set_coords = np.array(list(closed_set))
         if open_set_coords.size > 0:
             ax.scatter(open_set_coords[:, 1], open_set_coords[:, 0], c='g', marker='s', s=100, alpha=0.3, label='Open Set')
@@ -333,7 +358,7 @@ class AstarPathPlanner(Node):
             return np.linalg.norm(np.array(a) - np.array(b))
 
         open_set = []
-        heapq.heappush(open_set, (0, start_pos))
+        heapq.heappush(open_set, (0, heuristic(start_pos, goal_pos), start_pos))
         came_from = {}
         g_score = {start_pos: 0}
         f_score = {start_pos: heuristic(start_pos, goal_pos)}
@@ -343,7 +368,7 @@ class AstarPathPlanner(Node):
         step = 0
 
         while open_set:
-            current = heapq.heappop(open_set)[1]
+            current_f, current_h, current = heapq.heappop(open_set)
             
             self.visualize_astar_path(tb_id, start_pos, goal_pos, current, open_set, closed_set, g_score, f_score, came_from, step)
             step += 1
@@ -371,12 +396,20 @@ class AstarPathPlanner(Node):
 
                 tentative_g_score = g_score[current] + dis_per_grid
 
-                if neighbor not in [item[1] for item in open_set] or tentative_g_score < g_score.get(neighbor, float('inf')):
+                if neighbor not in [item[2] for item in open_set] or tentative_g_score < g_score.get(neighbor, float('inf')):
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal_pos)
-                    if neighbor not in [item[1] for item in open_set]:
-                        heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                    h_score = heuristic(neighbor, goal_pos)
+                    f_score[neighbor] = g_score[neighbor] + h_score
+                    if neighbor not in [item[2] for item in open_set]:
+                        heapq.heappush(open_set, (f_score[neighbor], h_score, neighbor))
+                    else:
+                        # Update the existing entry in the open set
+                        for i, (f, h, n) in enumerate(open_set):
+                            if n == neighbor:
+                                open_set[i] = (f_score[neighbor], h_score, neighbor)
+                                heapq.heapify(open_set)
+                                break
 
         print("Warning: No path found")
         return [], start_pos
