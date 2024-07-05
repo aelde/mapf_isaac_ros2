@@ -8,14 +8,21 @@ from nav_msgs.msg import Odometry
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import yaml
 from datetime import datetime
 from matplotlib.transforms import Affine2D
 from matplotlib.patches import Rectangle
 import heapq
+import time
+from datetime import datetime
 
 class AstarPathPlanner(Node):
     def __init__(self):
         super().__init__('Astar_Path_Planner')
+        self.config = self.load_config()
+        self.rotation_cost = self.config['rotation_cost']
+        print(f'Rotation cost: {self.rotation_cost}')
+        
         self.sub_task = self.create_subscription(TbTask, 'all_tb_job_task', self.sub_tb_job_callback, 10)
         self.pub_path_goal = self.create_publisher(TbPathtoGoal, 'TbPathtoGoal_top', 10)
         self.sub_tb_pos = self.create_subscription(Tbpose2D, 'tb_pose2d', self.sub_tbs_pos_cb, 10)
@@ -65,7 +72,13 @@ class AstarPathPlanner(Node):
             [10.5, -28.5, 0], [13.5, -28.5, 0], [16.5, -28.5, 0], [19.5, -28.5, 0],
             [22.5, -28.5, 0], [25.5, -28.5, 0], [28.5, -28.5, 0],
         ])
-        
+    
+    def load_config(self):
+        config_path = os.path.join(os.path.dirname(__file__), '_config', 'planner_config.yaml')
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+        return config
+    
     def visualize_astar_path(self, tb_id, start_pos, goal_pos, current, open_set, closed_set, g_score, f_score, came_from, step):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title(f'A* Path Planning for TB_{tb_id} - Step {step}')
@@ -297,19 +310,24 @@ class AstarPathPlanner(Node):
         all_tb_id = []
         all_starts = []
         all_goals = []
+        all_path_steps = []
         
         for tb_job in self.tb_queue_job_task:
-            path, start_pos = self.astar_planner(tb_job)
+            path, start_pos, path_steps = self.astar_planner(tb_job)
             if path:
                 all_paths.append(path)
                 all_tb_id.append(tb_job[0])
                 all_starts.append(start_pos)
                 all_goals.append(tb_job[1])
-                
-                # Visualize individual path
-                self.visualize_path(tb_job[0], start_pos, tb_job[1], path)
+                all_path_steps.append(path_steps)
             else:
                 print(f"Failed to find path for tb_id: {tb_job[0]}")
+                
+        # Visualizations (moved outside of planning time measurement)
+        for i, tb_id in enumerate(all_tb_id):
+            self.visualize_path(tb_id, all_starts[i], all_goals[i], all_paths[i])
+            for step, (current, open_set, closed_set, g_score, f_score, came_from) in enumerate(all_path_steps[i]):
+                self.visualize_astar_path(tb_id, all_starts[i], all_goals[i], current, open_set, closed_set, g_score, f_score, came_from, step)
         
         # Visualize all paths together
         if all_paths:
@@ -342,6 +360,8 @@ class AstarPathPlanner(Node):
     
     def astar_planner(self, tb_job):
         tb_id, goal_pos = tb_job
+        start_time = time.time()
+        
         curr_tb_node_pos = next((tb["curr_pos"] for tb in self.tb_pos if tb["id"] == tb_id), None)
         if curr_tb_node_pos is None:
             print(f"Error: No position found for tb_id {tb_id}")
@@ -365,7 +385,10 @@ class AstarPathPlanner(Node):
         closed_set = set()
 
         dis_per_grid = 3
+        rotation_cost = self.rotation_cost # Additional cost for rotation
+
         step = 0
+        path_steps = []  # Store path steps for later visualization
 
         while open_set:
             current_f, current_h, current = heapq.heappop(open_set)
@@ -379,7 +402,10 @@ class AstarPathPlanner(Node):
                     path.append(current)
                     current = came_from[current]
                 path.append(start_pos)
-                return path[::-1], start_pos
+                end_time = time.time()
+                planning_time = end_time - start_time
+                self.log_path_planning(tb_id, planning_time, len(path), start_pos, goal_pos)
+                return path[::-1], start_pos, path_steps
 
             closed_set.add(current)
 
@@ -390,11 +416,26 @@ class AstarPathPlanner(Node):
                 tuple(np.array(current) - np.array([0, dis_per_grid, 0])),
             ]
 
+            # Determine the direction of movement from the previous node to the current node
+            prev_node = came_from.get(current)
+            if prev_node:
+                direction = np.array(current) - np.array(prev_node)
+            else:
+                direction = np.zeros(3)  # No previous direction for the start node
+
             for neighbor in neighbors:
                 if not self.is_valid_move(np.array(neighbor)) or neighbor in closed_set:
                     continue
 
-                tentative_g_score = g_score[current] + dis_per_grid
+                # Determine if rotation is needed
+                new_direction = np.array(neighbor) - np.array(current)
+                needs_rotation = not np.array_equal(direction, new_direction) and not np.array_equal(direction, np.zeros(3))
+
+                # Calculate g_score
+                if needs_rotation:
+                    tentative_g_score = g_score[current] + dis_per_grid + rotation_cost
+                else:
+                    tentative_g_score = g_score[current] + dis_per_grid
 
                 if neighbor not in [item[2] for item in open_set] or tentative_g_score < g_score.get(neighbor, float('inf')):
                     came_from[neighbor] = current
@@ -410,9 +451,28 @@ class AstarPathPlanner(Node):
                                 open_set[i] = (f_score[neighbor], h_score, neighbor)
                                 heapq.heapify(open_set)
                                 break
-
+        end_time = time.time()
+        planning_time = end_time - start_time
+        self.log_path_planning(tb_id, planning_time, 0, start_pos, goal_pos, success=False)
         print("Warning: No path found")
-        return [], start_pos
+        return [], start_pos, path_steps
+    
+    def log_path_planning(self, tb_id, planning_time, path_length, start_pos, goal_pos, success=True):
+        log_file = "pathplanninglog.txt"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        with open(log_file, "a") as f:
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Robot ID: TB_{tb_id}\n")
+            f.write(f"Planning Time: {planning_time:.4f} seconds\n")
+            f.write(f"Start Position: {start_pos}\n")
+            f.write(f"Goal Position: {goal_pos}\n")
+            if success:
+                f.write(f"Path Length: {path_length} steps\n")
+                f.write(f"Status: Path found successfully\n")
+            else:
+                f.write("Status: No path found\n")
+            f.write(f"{'='*50}\n\n")
     
 def main(args=None):
     rclpy.init(args=args)
