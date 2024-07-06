@@ -32,6 +32,12 @@ class AstarPathPlanner(Node):
             {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3), "initial": np.zeros(3)}
             for i in range(1, 4)
         ]
+        
+        self.path_think_step = [
+            {"id": 1, "tstep": 0},
+            {"id": 2, "tstep": 0},
+            {"id": 3, "tstep": 0},
+        ]
 
         # Add obstacle positions
         self.obstacles = np.array([
@@ -398,6 +404,12 @@ class AstarPathPlanner(Node):
             current_f, current_h, current = heapq.heappop(open_set)
             
             self.visualize_astar_path(tb_id, start_pos, goal_pos, current, open_set, closed_set, g_score, f_score, came_from, step)
+            
+            # Update the existing dictionary entry for the given tb_id
+            for entry in self.path_think_step:
+                if entry["id"] == tb_id:
+                    entry["tstep"] = step
+
             step += 1
 
             if np.linalg.norm(np.array(current)[:2] - np.array(goal_pos)[:2]) < 1e-6:
@@ -408,7 +420,7 @@ class AstarPathPlanner(Node):
                 path.append(start_pos)
                 end_time = time.time()
                 planning_time = end_time - start_time
-                self.log_path_planning(tb_id, planning_time, len(path), start_pos, goal_pos)
+                self.log_path_planning(tb_id, planning_time, len(path)-1, start_pos, goal_pos)
                 return path[::-1], start_pos, path_steps
 
             closed_set.add(current)
@@ -468,11 +480,14 @@ class AstarPathPlanner(Node):
         with open(log_file, "a") as f:
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Robot ID: TB_{tb_id}\n")
-            f.write(f"Planning Time: {planning_time:.4f} seconds\n")
+            f.write(f"Planning Time: {planning_time:.4f} sec\n")
             f.write(f"Start Position: {start_pos}\n")
             f.write(f"Goal Position: {goal_pos}\n")
             if success:
                 f.write(f"Path Length: {path_length} steps\n")
+                think_steps = [i["tstep"] for i in self.path_think_step if tb_id == i["id"]]
+                f.write(f'Think steps: {think_steps[0]} thinks\n')
+                f.write(f"Think speed: {(think_steps[0]/planning_time):.4f} step/sec\n")
                 f.write(f"Status: Path found successfully\n")
             else:
                 f.write("Status: No path found\n")
