@@ -74,7 +74,7 @@ class AstarPathPlanner(Node):
         ])
     
     def load_config(self):
-        config_path = os.path.join(os.path.dirname(__file__), '_config', 'planner_config.yaml')
+        config_path = os.path.join(os.path.dirname(__file__),'..', 'config', 'planner_config.yaml')
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         return config
@@ -146,11 +146,12 @@ class AstarPathPlanner(Node):
         plt.gca().invert_yaxis()
         
         # Create 'astar_steps' directory if it doesn't exist
-        if not os.path.exists('astar_steps'):
-            os.makedirs('astar_steps')
+        result_dir = 'result/astar_steps'
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
         
         # Save the figure
-        filename = f'astar_steps/TB_{tb_id}_step_{step:03d}.png'
+        filename = os.path.join(result_dir, f'TB_{tb_id}_step_{step:03d}.png')
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         plt.close(fig)
         
@@ -193,12 +194,13 @@ class AstarPathPlanner(Node):
         plt.gca().invert_yaxis()
         
         # Create 'path' directory if it doesn't exist
-        if not os.path.exists('path'):
-            os.makedirs('path')
+        result_dir = 'result/path'
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
         
         # Generate unique filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f'path/TB_{tb_id}_path_{timestamp}.png'
+        filename = os.path.join(result_dir, f'TB_{tb_id}_path_{timestamp}.png')
         
         # Save the figure
         plt.savefig(filename, dpi=300, bbox_inches='tight')
@@ -252,12 +254,14 @@ class AstarPathPlanner(Node):
         plt.gca().invert_yaxis()
         
         # Create 'path' directory if it doesn't exist
-        if not os.path.exists('path'):
-            os.makedirs('path')
+        result_dir = 'result/path'
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+        
         
         # Generate unique filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f'path/All_TBs_paths_{timestamp}.png'
+        filename = os.path.join(result_dir, f'All_TBs_paths_{timestamp}.png')
         
         # Save the figure
         plt.savefig(filename, dpi=300, bbox_inches='tight')
@@ -458,7 +462,7 @@ class AstarPathPlanner(Node):
         return [], start_pos, path_steps
     
     def log_path_planning(self, tb_id, planning_time, path_length, start_pos, goal_pos, success=True):
-        log_file = "pathplanninglog.txt"
+        log_file = f"result/pathplanninglog_rot_{self.rotation_cost}.txt"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         with open(log_file, "a") as f:
