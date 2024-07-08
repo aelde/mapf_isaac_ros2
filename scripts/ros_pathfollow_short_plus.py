@@ -21,6 +21,8 @@ class PathFollowing(Node):
         self.robot_movements = {robot: {'straight': 0, 'rotate': 0} for robot in self.robots}
         self.all_robots_completed = False
         
+        self.all_robots_exec_time = []
+        
         # Subscriptions
         self.create_subscription(Odometry, 'tb_1_green/odom', self.tb_odom_cb, 10)
         self.create_subscription(Odometry, 'tb_2_red/odom', self.tb_odom_cb, 10)
@@ -173,7 +175,8 @@ class PathFollowing(Node):
 
     def log_total_time(self):
         completed_durations = [robot['duration'] for robot in self.robot_time.values() if robot['duration'] is not None]
-        
+        durtation_sum = sum([robot['duration'] for robot in self.robot_time.values() if robot['duration'] is not None])
+        print(f"sum_durations: {durtation_sum}")
         if not completed_durations:
             print("No robots have completed their paths yet.")
             return
@@ -186,12 +189,13 @@ class PathFollowing(Node):
             f.write(f"OVERALL MISSION SUMMARY\n")
             f.write(f"{'#'*50}\n")
             f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Total execution time: {total_time:.4f} seconds\n")
+            # f.write(f"Total execution time: {total_time:.4f} seconds\n")
+            f.write(f'Total robot execution time: {durtation_sum:.4f} seconds\n')
             f.write(f"Total straight movements(3m): {total_straight} , {total_straight*3} meter\n") # 3m per straight movement
             f.write(f"Total rotations: {total_rotate}\n")
             f.write(f"Total path length: {total_straight + total_rotate}\n")
-            f.write(f"average spd(straight): {(total_straight)/total_time:.4f} straight/sec , {(total_straight*3)/total_time:.4f} m/sec\n\n")
-            f.write(f"Overall efficiency: {(total_straight + total_rotate) / total_time:.4f} units/second\n\n")
+            f.write(f"average spd(straight): {(total_straight)/durtation_sum:.4f} straight/sec , {(total_straight*3)/durtation_sum:.4f} m/sec\n\n")
+            f.write(f"Overall efficiency: {(total_straight + total_rotate) / durtation_sum:.4f} units/second\n\n")
             
             f.write("Individual Robot Performance:\n")
             for robot, time_data in self.robot_time.items():

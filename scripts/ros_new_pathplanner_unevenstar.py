@@ -493,6 +493,7 @@ class AstarPathPlanner(Node):
     def log_path_planning(self, tb_id, planning_time, path_length, start_pos, goal_pos, success=True):
         log_file = f"result/pathplanninglog_cos_{self.costs}.txt"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f'Logging path planning results to {log_file}**************')
         
         with open(log_file, "a") as f:
             f.write(f"Timestamp: {timestamp}\n")
