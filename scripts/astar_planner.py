@@ -80,9 +80,9 @@ class AstarPlanner:
         start_pos = tuple(curr_tb_node_pos)
         goal_pos = tuple(goal_pos)
         
-        print(f'Start planning tb: {tb_id} path...')
-        print(f'Current position: {start_pos}')
-        print(f'Goal position: {goal_pos}')
+        # print(f'Start planning tb: {tb_id} path...')
+        # print(f'Current position: {start_pos}')
+        # print(f'Goal position: {goal_pos}')
 
         open_set = []
         heapq.heappush(open_set, (0, self.heuristic(start_pos, goal_pos), start_pos))

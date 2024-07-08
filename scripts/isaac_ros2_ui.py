@@ -108,7 +108,7 @@ class Subscriber(Node):
             {"id": 3,
              "name": "tb_3",
              "color": np.array([0,0,1]), #blue
-             "start_pos" : np.array([1.5,-13.5,0.0]),
+             "start_pos" : np.array([4.5,-16.5,0.0]),
              "usd_path": tb_usd_path_blue
              }, 
             # {"id": 3, "name": "tb_3", "color": np.array([0,0,1])},  # Blue color for the third link

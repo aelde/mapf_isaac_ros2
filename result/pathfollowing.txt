@@ -1,0 +1,69 @@
+==================================================
+Timestamp: 2024-07-08 23:53:57
+Robot: robot1
+Execution time: 11.4764 seconds
+Straight movements: 4
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3485 straight/second
+Average speed(m): 1.0456 m/second
+==================================================
+
+==================================================
+Timestamp: 2024-07-08 23:53:58
+Robot: robot3
+Execution time: 12.5764 seconds
+Straight movements: 4
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3181 straight/second
+Average speed(m): 0.9542 m/second
+==================================================
+
+==================================================
+Timestamp: 2024-07-08 23:54:26
+Robot: robot2
+Execution time: 40.3764 seconds
+Straight movements: 14
+Rotations: 3
+Total path length: 17
+Average speed(Straight): 0.3467 straight/second
+Average speed(m): 1.0402 m/second
+==================================================
+
+##################################################
+OVERALL MISSION SUMMARY
+##################################################
+Timestamp: 2024-07-08 23:54:26
+Total robot execution time: 64.4291 seconds
+Total straight movements(3m): 22 , 66 meter
+Total rotations: 5
+Total path length: 27
+average spd(straight): 0.3415 straight/sec , 1.0244 m/sec
+
+Overall efficiency: 0.4191 units/second
+
+Individual Robot Performance:
+  robot1:
+    Time: 11.4764 seconds
+    Straight: 4
+    Rotate: 1
+    average spd(straight): 0.3485 straight/sec
+    average spd(m): 1.0456 m/sec
+    Efficiency: 0.4357 units/second
+  robot2:
+    Time: 40.3764 seconds
+    Straight: 14
+    Rotate: 3
+    average spd(straight): 0.3467 straight/sec
+    average spd(m): 1.0402 m/sec
+    Efficiency: 0.4210 units/second
+  robot3:
+    Time: 12.5764 seconds
+    Straight: 4
+    Rotate: 1
+    average spd(straight): 0.3181 straight/sec
+    average spd(m): 0.9542 m/sec
+    Efficiency: 0.3976 units/second
+##################################################
+

@@ -10,8 +10,10 @@ import yaml
 from datetime import datetime
 import time
 
-from astar_planner import AstarPlanner
-from visualizer import Visualizer
+
+from planner_control import PlannerControl
+# from astar_planner import AstarPlanner
+# from visualizer import Visualizer
 
 def load_uneven_astar_config():
     config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'uneven_astar.yaml')
@@ -19,7 +21,7 @@ def load_uneven_astar_config():
         config = yaml.safe_load(file)
     return config['costs']
 
-class AstarPathPlanner(Node):
+class RosPathPlanner(Node):
     def __init__(self):
         super().__init__('Astar_Path_Planner')
         self.config = load_uneven_astar_config()
@@ -81,8 +83,9 @@ class AstarPathPlanner(Node):
             [22.5, -28.5, 0], [25.5, -28.5, 0], [28.5, -28.5, 0],
         ])
 
-        self.astar_planner = AstarPlanner(self.obstacles)
-        self.visualizer = Visualizer()
+        self.planner_control = PlannerControl(self.obstacles)
+        # self.astar_planner = AstarPlanner(self.obstacles)
+        # self.visualizer = Visualizer()
 
     def sub_tbs_pos_cb(self, msg):
         for tb in self.tb_pos:
@@ -121,29 +124,31 @@ class AstarPathPlanner(Node):
         all_path_steps = []
         
         for tb_job in self.tb_queue_job_task:
-            path, start_pos, path_steps = self.astar_planner.plan(tb_job, self.tb_pos)
+            # path, start_pos, path_steps = self.astar_planner.plan(tb_job, self.tb_pos)
+            path, start_pos = self.planner_control.plan_path(tb_job, self.tb_pos)
             if path:
                 all_paths.append(path)
                 all_tb_id.append(tb_job[0])
                 all_starts.append(start_pos)
                 all_goals.append(tb_job[1])
-                all_path_steps.append(path_steps)
+                # all_path_steps.append(path_steps)
             else:
                 print(f"Failed to find path for tb_id: {tb_job[0]}")
         
         #log overall planning
-        self.astar_planner.log_overall_planning()
+        # self.astar_planner.log_overall_planning()
+        # self.planner_control.log_overall_planning()
         
         # Visualizations
-        for i, tb_id in enumerate(all_tb_id):
-            self.visualizer.visualize_path(tb_id, all_starts[i], all_goals[i], all_paths[i])
-            for step, (current, open_set, closed_set, g_score, f_score, came_from) in enumerate(all_path_steps[i]):
-                self.visualizer.visualize_astar_path(tb_id, all_starts[i], all_goals[i], current, open_set, closed_set, g_score, f_score, came_from, step)
+        # for i, tb_id in enumerate(all_tb_id):
+        #     self.visualizer.visualize_path(tb_id, all_starts[i], all_goals[i], all_paths[i])
+        #     for step, (current, open_set, closed_set, g_score, f_score, came_from) in enumerate(all_path_steps[i]):
+        #         self.visualizer.visualize_astar_path(tb_id, all_starts[i], all_goals[i], current, open_set, closed_set, g_score, f_score, came_from, step)
         
         if all_paths:
-            print(f'All paths: ')
-            for i in range(len(all_paths)):
-                print(f'TB_{all_tb_id[i]}: {all_paths[i]}')
+            # print(f'All paths: ')
+            # for i in range(len(all_paths)):
+            #     print(f'TB_{all_tb_id[i]}: {all_paths[i]}')
             
             sorted_indices = sorted(range(len(all_tb_id)), key=lambda k: all_tb_id[k])
             sorted_paths = [all_paths[i] for i in sorted_indices]
@@ -156,7 +161,8 @@ class AstarPathPlanner(Node):
             for i, tb_id in enumerate(sorted_tb_id):
                 print(f'TB_{tb_id}: {sorted_paths[i]}')
             
-            self.visualizer.visualize_all_paths(sorted_paths, sorted_starts, sorted_goals)
+            # self.visualizer.visualize_all_paths(sorted_paths, sorted_starts, sorted_goals)
+            
             self.pub_tb_path(sorted_tb_id, sorted_paths)
         else:
             print("No valid paths found for any robots")
@@ -165,12 +171,12 @@ class AstarPathPlanner(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    path_planner = AstarPathPlanner()
-    print('A* Path Planner node running')
+    path_planner = RosPathPlanner()
+    print('RosPathPlanner node running')
     try:
         rclpy.spin(path_planner)
     except KeyboardInterrupt:
-        print('A* Path Planner node terminated')
+        print('RosPathPlanner node terminated')
     finally:
         path_planner.destroy_node()
         rclpy.shutdown()
