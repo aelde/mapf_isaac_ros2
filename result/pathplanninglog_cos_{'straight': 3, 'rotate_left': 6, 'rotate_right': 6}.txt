@@ -1,0 +1,45 @@
+Timestamp: 2024-07-09 10:07:55
+Robot ID: TB_1
+Planning Time: 0.0030 sec
+Start Position: (-1.5, -16.5, 0.0)
+Goal Position: (-13.5, -4.5, 0.0)
+A* Thinking Steps: 27
+Path Length: 8 steps
+Straight: 3, Rotate Left: 6, Rotate Right: 6
+Status: Path found successfully
+==================================================
+
+Timestamp: 2024-07-09 10:07:55
+Robot ID: TB_2
+Planning Time: 0.0017 sec
+Start Position: (7.5, 19.5, 0.0)
+Goal Position: (7.5, 1.5, 0.0)
+A* Thinking Steps: 20
+Path Length: 14 steps
+Straight: 3, Rotate Left: 6, Rotate Right: 6
+Status: Path found successfully
+==================================================
+
+Timestamp: 2024-07-09 10:07:55
+Robot ID: TB_3
+Planning Time: 0.0008 sec
+Start Position: (4.5, -16.5, 0.0)
+Goal Position: (7.5, -7.5, 0.0)
+A* Thinking Steps: 6
+Path Length: 4 steps
+Straight: 3, Rotate Left: 6, Rotate Right: 6
+Status: Path found successfully
+==================================================
+
+##################################################
+OVERALL PLANNING SUMMARY
+##################################################
+Total Robots: 3
+Successful Plans: 3
+Total Planning Time: 0.0055 sec
+Average Planning Time: 0.0018 sec
+Total Path Length: 26 steps
+Total A* Thinking Steps: 53
+Average A* Thinking Steps: 17.67
+==================================================
+

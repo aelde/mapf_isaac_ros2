@@ -1,0 +1,22 @@
+==================================================
+Timestamp: 2024-07-09 10:08:40
+Robot: robot3
+Execution time: 12.8070 seconds
+Straight movements: 4
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3123 straight/second
+Average speed(m): 0.9370 m/second
+==================================================
+
+==================================================
+Timestamp: 2024-07-09 10:08:53
+Robot: robot1
+Execution time: 25.4073 seconds
+Straight movements: 8
+Rotations: 1
+Total path length: 9
+Average speed(Straight): 0.3149 straight/second
+Average speed(m): 0.9446 m/second
+==================================================
+
