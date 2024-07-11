@@ -117,10 +117,11 @@ class AstarPlanner:
                 planning_time = end_time - start_time
                 thinking_steps = len(path_steps)-1  # Number of A* thinking steps
                 
-                if path:
-                    self.log_path_planning(tb_id, planning_time, len(path)-1, start_pos, goal_pos, thinking_steps, success=True)
-                else:
-                    self.log_path_planning(tb_id, planning_time, 0, start_pos, goal_pos, thinking_steps, success=False)
+                # Log path planning result
+                # if path:
+                #     self.log_path_planning(tb_id, planning_time, len(path)-1, start_pos, goal_pos, thinking_steps, success=True)
+                # else:
+                #     self.log_path_planning(tb_id, planning_time, 0, start_pos, goal_pos, thinking_steps, success=False)
 
                 # Store planning stats for overall summary
                 self.planning_stats[tb_id] = {

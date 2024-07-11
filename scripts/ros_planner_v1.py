@@ -9,7 +9,8 @@ import os
 import yaml
 from datetime import datetime
 import time
-
+import sys
+from map.map import obstacles_1
 
 from planner_control import PlannerControl
 # from astar_planner import AstarPlanner
@@ -44,45 +45,8 @@ class RosPathPlanner(Node):
             {"id": 3, "tstep": 0},
         ]
 
-        self.obstacles = np.array([
-            [-10.5, 4.5, 0], [-10.5, 7.5, 0], [-10.5, 10.5, 0], [-10.5, 13.5, 0],
-            [-10.5, 16.5, 0], [-10.5, 19.5, 0], [-10.5, 22.5, 0],
-            [-4.5, 4.5, 0], [-4.5, 7.5, 0], [-4.5, 10.5, 0], [-4.5, 13.5, 0],
-            [-4.5, 16.5, 0], [-4.5, 19.5, 0], [-4.5, 22.5, 0],
-            [-1.5, 4.5, 0], [-1.5, 7.5, 0], [-1.5, 10.5, 0], [-1.5, 13.5, 0],
-            [-1.5, 16.5, 0], [-1.5, 19.5, 0], [-1.5, 22.5, 0],
-            [4.5, 4.5, 0], [4.5, 7.5, 0], [4.5, 10.5, 0], [4.5, 13.5, 0],
-            [4.5, 16.5, 0], [4.5, 19.5, 0], [4.5, 22.5, 0],
-            [7.5, 4.5, 0], [7.5, 7.5, 0], [7.5, 10.5, 0],
-            [10.5, 4.5, 0], [10.5, 7.5, 0], [10.5, 10.5, 0], [10.5, 13.5, 0],
-            [10.5, 16.5, 0], [10.5, 19.5, 0], [10.5, 22.5, 0],
-            [13.5, 4.5, 0], [13.5, 7.5, 0], [13.5, 10.5, 0], [13.5, 13.5, 0],
-            [13.5, 16.5, 0], [13.5, 19.5, 0], [13.5, 22.5, 0],
-            # frame bottom
-            [16.5, -25.5, 0], [16.5, -22.5, 0], [16.5, -19.5, 0], [16.5, -16.5, 0],
-            [16.5, -13.5, 0], [16.5, -10.5, 0], [16.5, -7.5, 0], [16.5, -4.5, 0],
-            [16.5, -1.5, 0], [16.5, 1.5, 0], [16.5, 4.5, 0], [16.5, 7.5, 0],
-            [16.5, 10.5, 0], [16.5, 13.5, 0], [16.5, 16.5, 0], [16.5, 19.5, 0],
-            [16.5, 22.5, 0], [16.5, 25.5, 0], [16.5, 28.5, 0],
-            # frame right
-            [16.5, 28.5, 0], [13.5, 28.5, 0], [10.5, 28.5, 0], [7.5, 28.5, 0],
-            [4.5, 28.5, 0], [1.5, 28.5, 0], [-1.5, 28.5, 0], [-4.5, 28.5, 0],
-            [-7.5, 28.5, 0], [-10.5, 28.5, 0], [-13.5, 28.5, 0], [-16.5, 28.5, 0],
-            [-19.5, 28.5, 0], [-22.5, 28.5, 0], [-25.5, 28.5, 0],
-            # frame top
-            [-16.5, 25.5, 0],  [-16.5, 22.5, 0],  [-16.5, 19.5, 0],  [-16.5, 16.5, 0],
-            [-16.5, 13.5, 0],  [-16.5, 10.5, 0],  [-16.5, 7.5, 0],   [-16.5, 4.5, 0],
-            [-16.5, 1.5, 0],   [-16.5, -1.5, 0],  [-16.5, -4.5, 0],  [-16.5, -7.5, 0],
-            [-16.5, -10.5, 0], [-16.5, -13.5, 0], [-16.5, -16.5, 0], [-16.5, -19.5, 0],
-            [-16.5, -22.5, 0], [-16.5, -25.5, 0], [-16.5, -28.5, 0],
-            # frame left
-            [-25.5, -28.5, 0], [-22.5, -28.5, 0], [-19.5, -28.5, 0], [-16.5, -28.5, 0],
-            [-13.5, -28.5, 0], [-10.5, -28.5, 0], [-7.5, -28.5, 0], [-4.5, -28.5, 0],
-            [-1.5, -28.5, 0], [1.5, -28.5, 0], [4.5, -28.5, 0], [7.5, -28.5, 0],
-            [10.5, -28.5, 0], [13.5, -28.5, 0], [16.5, -28.5, 0], [19.5, -28.5, 0],
-            [22.5, -28.5, 0], [25.5, -28.5, 0], [28.5, -28.5, 0],
-        ])
-
+        self.obstacles = obstacles_1
+        # self.obstacles = np.array([0,0,0])
         self.planner_control = PlannerControl(self.obstacles)
         # self.astar_planner = AstarPlanner(self.obstacles)
         # self.visualizer = Visualizer()
@@ -116,6 +80,30 @@ class RosPathPlanner(Node):
         if msg.start_routing:
             self.plan_and_publish_paths()
 
+    # def plan_and_publish_paths(self):
+    #     tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
+    #     all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)
+
+    #     if all_paths:
+    #         print(f'All paths: ')
+    #         for i, path in enumerate(all_paths):
+    #             print(f'TB_{tasks[i][0]}: {path}')
+            
+    #         sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
+    #         sorted_paths = [all_paths[i] for i in sorted_indices]
+    #         sorted_tb_id = [tasks[i][0] for i in sorted_indices]
+            
+    #         print(f'/*/*/*/*/*/*/*/*/*/*/*/')
+    #         print(f'Sorted TB IDs: ')
+    #         for i, tb_id in enumerate(sorted_tb_id):
+    #             print(f'TB_{tb_id}: {sorted_paths[i]}')
+            
+    #         self.pub_tb_path(sorted_tb_id, sorted_paths)
+    #     else:
+    #         print("No valid paths found for any robots")
+        
+    #     self.tb_queue_job_task = []
+    
     def plan_and_publish_paths(self):
         tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
         all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)

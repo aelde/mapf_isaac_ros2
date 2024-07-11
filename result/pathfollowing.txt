@@ -1,207 +1,91 @@
 ==================================================
-Timestamp: 2024-07-09 00:09:36
+Timestamp: 2024-07-11 16:51:45
 Robot: robot1
-Execution time: 14.8801 seconds
+Execution time: 10.8951 seconds
 Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.2688 straight/second
-Average speed(m): 0.8064 m/second
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3671 straight/second
+Average speed(m): 1.1014 m/second
 ==================================================
 
 ==================================================
-Timestamp: 2024-07-09 00:09:39
+Timestamp: 2024-07-11 16:51:46
 Robot: robot3
-Execution time: 17.2800 seconds
+Execution time: 11.7949 seconds
 Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.2315 straight/second
-Average speed(m): 0.6944 m/second
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3391 straight/second
+Average speed(m): 1.0174 m/second
 ==================================================
 
 ==================================================
-Timestamp: 2024-07-09 00:10:02
+Timestamp: 2024-07-11 16:52:13
 Robot: robot2
-Execution time: 40.2799 seconds
+Execution time: 37.9950 seconds
 Straight movements: 14
 Rotations: 3
 Total path length: 17
-Average speed(Straight): 0.3476 straight/second
-Average speed(m): 1.0427 m/second
+Average speed(Straight): 0.3685 straight/second
+Average speed(m): 1.1054 m/second
 ==================================================
 
 ##################################################
 OVERALL MISSION SUMMARY
 ##################################################
-Timestamp: 2024-07-09 00:10:02
-Total robot execution time: 72.4400 seconds
+Timestamp: 2024-07-11 16:52:13
+Total robot execution time: 60.6851 seconds
 Total straight movements(3m): 22 , 66 meter
-Total rotations: 9
-Total path length: 31
-average spd(straight): 0.3037 straight/sec , 0.9111 m/sec
+Total rotations: 5
+Total path length: 27
+average spd(straight): 0.3625 straight/sec , 1.0876 m/sec
 
-Overall efficiency: 0.4279 units/second
+Overall efficiency: 0.4449 units/second
 
 Individual Robot Performance:
   robot1:
-    Time: 14.8801 seconds
+    Time: 10.8951 seconds
     Straight: 4
-    Rotate: 3
-    average spd(straight): 0.2688 straight/sec
-    average spd(m): 0.8064 m/sec
-    Efficiency: 0.4704 units/second
+    Rotate: 1
+    average spd(straight): 0.3671 straight/sec
+    average spd(m): 1.1014 m/sec
+    Efficiency: 0.4589 units/second
   robot2:
-    Time: 40.2799 seconds
+    Time: 37.9950 seconds
     Straight: 14
     Rotate: 3
-    average spd(straight): 0.3476 straight/sec
-    average spd(m): 1.0427 m/sec
-    Efficiency: 0.4220 units/second
+    average spd(straight): 0.3685 straight/sec
+    average spd(m): 1.1054 m/sec
+    Efficiency: 0.4474 units/second
   robot3:
-    Time: 17.2800 seconds
+    Time: 11.7949 seconds
     Straight: 4
-    Rotate: 3
-    average spd(straight): 0.2315 straight/sec
-    average spd(m): 0.6944 m/sec
-    Efficiency: 0.4051 units/second
+    Rotate: 1
+    average spd(straight): 0.3391 straight/sec
+    average spd(m): 1.0174 m/sec
+    Efficiency: 0.4239 units/second
 ##################################################
 
 ==================================================
-Timestamp: 2024-07-09 00:11:09
+Timestamp: 2024-07-11 16:56:20
 Robot: robot1
-Execution time: 18.3393 seconds
+Execution time: 12.1680 seconds
 Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.2181 straight/second
-Average speed(m): 0.6543 m/second
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3287 straight/second
+Average speed(m): 0.9862 m/second
 ==================================================
 
 ==================================================
-Timestamp: 2024-07-09 00:11:13
+Timestamp: 2024-07-11 16:56:21
 Robot: robot3
-Execution time: 21.5391 seconds
+Execution time: 13.2679 seconds
 Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.1857 straight/second
-Average speed(m): 0.5571 m/second
+Rotations: 1
+Total path length: 5
+Average speed(Straight): 0.3015 straight/second
+Average speed(m): 0.9044 m/second
 ==================================================
-
-==================================================
-Timestamp: 2024-07-09 00:11:41
-Robot: robot2
-Execution time: 49.8393 seconds
-Straight movements: 14
-Rotations: 3
-Total path length: 17
-Average speed(Straight): 0.2809 straight/second
-Average speed(m): 0.8427 m/second
-==================================================
-
-##################################################
-OVERALL MISSION SUMMARY
-##################################################
-Timestamp: 2024-07-09 00:11:41
-Total robot execution time: 89.7177 seconds
-Total straight movements(3m): 22 , 66 meter
-Total rotations: 9
-Total path length: 31
-average spd(straight): 0.2452 straight/sec , 0.7356 m/sec
-
-Overall efficiency: 0.3455 units/second
-
-Individual Robot Performance:
-  robot1:
-    Time: 18.3393 seconds
-    Straight: 4
-    Rotate: 3
-    average spd(straight): 0.2181 straight/sec
-    average spd(m): 0.6543 m/sec
-    Efficiency: 0.3817 units/second
-  robot2:
-    Time: 49.8393 seconds
-    Straight: 14
-    Rotate: 3
-    average spd(straight): 0.2809 straight/sec
-    average spd(m): 0.8427 m/sec
-    Efficiency: 0.3411 units/second
-  robot3:
-    Time: 21.5391 seconds
-    Straight: 4
-    Rotate: 3
-    average spd(straight): 0.1857 straight/sec
-    average spd(m): 0.5571 m/sec
-    Efficiency: 0.3250 units/second
-##################################################
-
-==================================================
-Timestamp: 2024-07-09 00:15:52
-Robot: robot1
-Execution time: 21.3505 seconds
-Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.1873 straight/second
-Average speed(m): 0.5620 m/second
-==================================================
-
-==================================================
-Timestamp: 2024-07-09 00:15:55
-Robot: robot3
-Execution time: 23.8504 seconds
-Straight movements: 4
-Rotations: 3
-Total path length: 7
-Average speed(Straight): 0.1677 straight/second
-Average speed(m): 0.5031 m/second
-==================================================
-
-==================================================
-Timestamp: 2024-07-09 00:16:19
-Robot: robot2
-Execution time: 48.3505 seconds
-Straight movements: 14
-Rotations: 3
-Total path length: 17
-Average speed(Straight): 0.2896 straight/second
-Average speed(m): 0.8687 m/second
-==================================================
-
-##################################################
-OVERALL MISSION SUMMARY
-##################################################
-Timestamp: 2024-07-09 00:16:19
-Total robot execution time: 93.5514 seconds
-Total straight movements(3m): 22 , 66 meter
-Total rotations: 9
-Total path length: 31
-average spd(straight): 0.2352 straight/sec , 0.7055 m/sec
-
-Overall efficiency: 0.3314 units/second
-
-Individual Robot Performance:
-  robot1:
-    Time: 21.3505 seconds
-    Straight: 4
-    Rotate: 3
-    average spd(straight): 0.1873 straight/sec
-    average spd(m): 0.5620 m/sec
-    Efficiency: 0.3279 units/second
-  robot2:
-    Time: 48.3505 seconds
-    Straight: 14
-    Rotate: 3
-    average spd(straight): 0.2896 straight/sec
-    average spd(m): 0.8687 m/sec
-    Efficiency: 0.3516 units/second
-  robot3:
-    Time: 23.8504 seconds
-    Straight: 4
-    Rotate: 3
-    average spd(straight): 0.1677 straight/sec
-    average spd(m): 0.5031 m/sec
-    Efficiency: 0.2935 units/second
-##################################################
 
