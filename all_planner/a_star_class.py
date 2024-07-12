@@ -3,8 +3,6 @@ import heapq
 from itertools import product
 import numpy as np
 import copy
-import matplotlib.pyplot as plt
-import os
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
@@ -388,9 +386,6 @@ class A_Star(object):
 
 
         self.push_node(root)
-        
-        # self.visualize_step(root)
-        
         self.closed_list[(tuple(root['loc']),root['timestep'])] = [root]
 
         while len(self.open_list) > 0:
@@ -400,8 +395,6 @@ class A_Star(object):
 
             curr = self.pop_node()
 
-            # self.visualize_step(curr)
-            
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
             # print(curr['reached_goal'] )
 
@@ -449,7 +442,4 @@ class A_Star(object):
         print('no solution')
 
         # print("\nEND OF A*\n") # comment out if needed
-        return None    
-
-    # Add this method to the A_Star class
-
+        return None        

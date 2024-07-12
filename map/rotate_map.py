@@ -17,7 +17,7 @@ def rotate_map_90_cc(input_file, output_file):
             f.write(row + '\n')
 
 # Use the function
-# rotate_map_90_cc('map1_rotated_1.txt', 'map1_rotated_2.txt')
+rotate_map_90_cc('map1_real.txt', 'map1_real.txt')
 
 def flip_map_vertically(input_file, output_file):
     # Read the input file
@@ -38,4 +38,4 @@ def flip_map_vertically(input_file, output_file):
             f.write(row + '\n')
 
 # Use the function
-flip_map_vertically('map1_rotated_2.txt', 'map1_flipped.txt')
+# flip_map_vertically('map1_real.txt', 'map1_real.txt')

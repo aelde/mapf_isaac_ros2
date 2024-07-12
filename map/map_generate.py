@@ -11,12 +11,14 @@ def create_map_file(obstacles, filename):
     grid_size = max(max_x, max_y)
     
     # Create an empty grid
-    grid = np.full((grid_size, grid_size), '.')
+    # grid = np.full((grid_size, grid_size), '.') # for test
+    grid = np.full((grid_size, grid_size), '0') # for real
     
     # Place obstacles
     for obs in scaled_obstacles:
         if 0 <= obs[1] < grid_size and 0 <= obs[0] < grid_size:
-            grid[obs[1], obs[0]] = '@'
+            # grid[obs[1], obs[0]] = '@' # for test
+            grid[obs[1], obs[0]] = '1' # for real
     
     # Write to file
     with open(filename, 'w') as f:
@@ -29,4 +31,4 @@ obstacles = np.array([
     # ... (your obstacle data here)
 ])
 
-create_map_file(obstacles_1, 'map1.txt')
+create_map_file(obstacles_1, 'map1_real.txt')

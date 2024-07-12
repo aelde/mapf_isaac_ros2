@@ -11,16 +11,40 @@ from datetime import datetime
 import time
 import sys
 from map.map import obstacles_1
-
+import glob
 from planner_control import PlannerControl
-# from astar_planner import AstarPlanner
-# from visualizer import Visualizer
+
+MAP_NAME = 'cbs_2'
 
 def load_uneven_astar_config():
     config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'uneven_astar.yaml')
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
     return config['costs']
+
+def convert_normal_to_pos(pos):
+    return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
+
+def convert_pos_to_normal(normal):
+    return (int((normal[0] + 16.5) / 3), int((normal[1] + 28.5) / 3))
+
+def import_mapf_instance(filename):
+    f = open(filename, 'r')
+    rows, columns = [int(x) for x in f.readline().split(' ')]
+    my_map = []
+    for _ in range(rows):
+        my_map.append([cell == '@' for cell in f.readline().strip()])
+    f.close()
+    return my_map 
+
+def glob_map_files():
+    map_files = glob.glob(os.path.join(os.path.dirname(__file__), '..','map', f'{MAP_NAME}.txt'))
+    if map_files:
+        print(f'Map files found: {map_files}')
+        return import_mapf_instance(map_files[0])  # Use the first file found
+    else:
+        print("No map files found!")
+        return None
 
 class RosPathPlanner(Node):
     def __init__(self):
@@ -35,26 +59,33 @@ class RosPathPlanner(Node):
         
         self.tb_queue_job_task = []
         self.tb_pos = [
-            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3), "initial": np.zeros(3)}
+            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": np.zeros(3)}
             for i in range(1, 4)
         ]
-        
+        self.is_start = [True for i in range(3)]
         self.path_think_step = [
             {"id": 1, "tstep": 0},
             {"id": 2, "tstep": 0},
             {"id": 3, "tstep": 0},
         ]
-
-        self.obstacles = obstacles_1
-        # self.obstacles = np.array([0,0,0])
-        self.planner_control = PlannerControl(self.obstacles)
-        # self.astar_planner = AstarPlanner(self.obstacles)
+        print(f"Current working directory: {os.getcwd()}")
+        self.map = glob_map_files()
+        if self.map is None:
+            self.get_logger().error('No map file found. Exiting.')
+            rclpy.shutdown()
+            sys.exit(1)
+        
+        # self.planner_control = PlannerControl(self.map)
+        # self.astar_planner = AstarPlanner(self.map)
         # self.visualizer = Visualizer()
 
     def sub_tbs_pos_cb(self, msg):
-        for tb in self.tb_pos:
-            if tb["id"] == msg.tb_id:
-                tb["curr_pos"] = np.array([msg.tb_pos.x, msg.tb_pos.y, 0.0])
+        for i in range(len(self.tb_pos)):
+            if self.tb_pos[i]["id"]== msg.tb_id:
+                self.tb_pos[i]["curr_pos"] = np.array([msg.tb_pos.x, msg.tb_pos.y, 0.0])
+                if self.is_start[i]:
+                    self.tb_pos[i]["start_pos"] = np.array([msg.tb_pos.x, msg.tb_pos.y, 0.0])
+                    self.is_start[i] = False
                 break
 
     def pub_tb_path(self, tb_ids, paths):
@@ -74,57 +105,52 @@ class RosPathPlanner(Node):
     def sub_tb_job_callback(self, msg):
         self.tb_queue_job_task.append([msg.tb_id, np.array([msg.tb_goal.x, msg.tb_goal.y, msg.tb_goal.z])])
         for task in self.tb_queue_job_task:
+            if task[0] == msg.tb_id:
+                self.tb_pos[msg.tb_id - 1]["goal_pos"] = task[1]
             print(task)
         print(f'-----')
         
         if msg.start_routing:
             self.plan_and_publish_paths()
-
-    # def plan_and_publish_paths(self):
-    #     tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
-    #     all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)
-
-    #     if all_paths:
-    #         print(f'All paths: ')
-    #         for i, path in enumerate(all_paths):
-    #             print(f'TB_{tasks[i][0]}: {path}')
-            
-    #         sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
-    #         sorted_paths = [all_paths[i] for i in sorted_indices]
-    #         sorted_tb_id = [tasks[i][0] for i in sorted_indices]
-            
-    #         print(f'/*/*/*/*/*/*/*/*/*/*/*/')
-    #         print(f'Sorted TB IDs: ')
-    #         for i, tb_id in enumerate(sorted_tb_id):
-    #             print(f'TB_{tb_id}: {sorted_paths[i]}')
-            
-    #         self.pub_tb_path(sorted_tb_id, sorted_paths)
-    #     else:
-    #         print("No valid paths found for any robots")
-        
-    #     self.tb_queue_job_task = []
     
     def plan_and_publish_paths(self):
         tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
-        all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)
+        print(f'Tasks: {tasks}')
+        print(f'TB Pos:')
+        for tb in self.tb_pos: print(tb)
+        print(f'************************************')
+        starts = [(self.tb_pos[i]["start_pos"][:2]) for i in range(len(self.tb_pos))]
+        goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
+        conv_starts = [convert_pos_to_normal(starts[i]) for i in range(len(starts))]
+        conv_goals = [convert_pos_to_normal(goals[i]) for i in range(len(goals))]
+        print(f'Starts: \n{starts}')
+        print(f'Gaols: \n{goals}')
+        print(f'Converted Starts: \n{conv_starts}')
+        print(f'Converted Goals: \n{conv_goals}')
+        print()
+        
+        all_paths = PlannerControl().plan_paths(self.map, conv_starts, conv_goals)
+        print(f'All paths: ')
+        print(all_paths)
+        # all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)
 
-        if all_paths:
-            print(f'All paths: ')
-            for i, path in enumerate(all_paths):
-                print(f'TB_{tasks[i][0]}: {path}')
+        # if all_paths:
+        #     print(f'All paths: ')
+        #     for i, path in enumerate(all_paths):
+        #         print(f'TB_{tasks[i][0]}: {path}')
             
-            sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
-            sorted_paths = [all_paths[i] for i in sorted_indices]
-            sorted_tb_id = [tasks[i][0] for i in sorted_indices]
+        #     sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
+        #     sorted_paths = [all_paths[i] for i in sorted_indices]
+        #     sorted_tb_id = [tasks[i][0] for i in sorted_indices]
             
-            print(f'/*/*/*/*/*/*/*/*/*/*/*/')
-            print(f'Sorted TB IDs: ')
-            for i, tb_id in enumerate(sorted_tb_id):
-                print(f'TB_{tb_id}: {sorted_paths[i]}')
+        #     print(f'/*/*/*/*/*/*/*/*/*/*/*/')
+        #     print(f'Sorted TB IDs: ')
+        #     for i, tb_id in enumerate(sorted_tb_id):
+        #         print(f'TB_{tb_id}: {sorted_paths[i]}')
             
-            self.pub_tb_path(sorted_tb_id, sorted_paths)
-        else:
-            print("No valid paths found for any robots")
+        #     self.pub_tb_path(sorted_tb_id, sorted_paths)
+        # else:
+        #     print("No valid paths found for any robots")
         
         self.tb_queue_job_task = []
 
