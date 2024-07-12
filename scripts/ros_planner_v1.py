@@ -157,6 +157,7 @@ class RosPathPlanner(Node):
             Visualizer.visualize_path(obstacles_1, i+1, starts[i], goals[i], path)
         # visualize all paths
         Visualizer.visualize_all_paths(obstacles_1, all_paths_conv, starts, goals)
+        Visualizer.visualize_all_paths_2(obstacles_1, all_paths_conv, starts, goals)
         
         # visualize animate
         PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)

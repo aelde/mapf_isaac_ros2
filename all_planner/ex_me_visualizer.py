@@ -2,6 +2,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 import os
+from matplotlib.collections import LineCollection
+from matplotlib.path import Path
+import matplotlib.patches as patches
+
+def offset_curve(xs, ys, offset):
+    """Offset curve (xs,ys) by offset."""
+    verts = np.array([xs, ys]).T
+    codes = np.full(len(xs), Path.LINETO)
+    codes[0] = Path.MOVETO
+    path = Path(verts, codes)
+    
+    # Calculate the normal vectors manually
+    tangents = np.gradient(path.vertices, axis=0)
+    normal_vectors = np.array([-tangents[:, 1], tangents[:, 0]]).T
+    normal_vectors /= np.linalg.norm(normal_vectors, axis=1)[:, np.newaxis]
+    
+    return path.vertices + offset * normal_vectors
 
 class Visualizer:
     def __init__(self):
@@ -196,3 +213,55 @@ class Visualizer:
         plt.close(fig)
         
         print(f'All paths visualization saved as {filename}')
+        
+    @staticmethod
+    def visualize_all_paths_2(obstacles, all_paths, all_starts, all_goals):
+        fig, ax = plt.subplots(figsize=(16, 12))
+        ax.set_title('Path Planning for All TBs')
+        
+        ax.set_xlim(-28.5, 28.5)
+        ax.set_ylim(-16.5, 16.5)
+        ax.set_xticks(np.arange(-25.5, 26.5, 3))
+        ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        ax.grid(True)
+        
+        obstacles = obstacles[:, :2]
+        ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
+        
+        colors = ['g', 'r', 'b']
+        offsets = [-0.2, 0, 0.2]  # offsets for each path
+        
+        for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
+            path = np.array(path)
+            if path.size > 0:
+                # Offset the path
+                offset_path = offset_curve(path[:, 0], path[:, 1], offsets[i])
+                
+                # Plot the offset path
+                ax.plot(offset_path[:, 1], offset_path[:, 0], color=colors[i], linestyle='-', linewidth=2, label=f'Path TB_{i+1}')
+            
+            ax.scatter(start[1], start[0], c=colors[i], marker='o', s=200)
+            ax.scatter(goal[1], goal[0], c=colors[i], marker='*', s=200)
+
+        # Add labels for the start and goal points
+        ax.scatter([], [], c='c', marker='o', s=200, label='Start')
+        ax.scatter([], [], c='m', marker='*', s=200, label='Goal')
+        
+        ax.set_aspect('equal', 'box')
+        ax.set_xlabel('Y')
+        ax.set_ylabel('X')
+        ax.legend()
+        
+        plt.gca().invert_yaxis()
+        
+        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.join(result_dir, f'All2_TBs_paths_{timestamp}.png')
+        
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        
+        print(f'All2 paths visualization saved as {filename}')

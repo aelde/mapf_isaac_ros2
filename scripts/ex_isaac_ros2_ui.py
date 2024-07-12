@@ -96,7 +96,7 @@ class Subscriber(Node):
             {"id": 1, 
              "name": "tb_1",
              "color": np.array([0,1,0]), #green
-             "start_pos": np.array([-1.5,-16.5,0.0]), 
+             "start_pos": np.array([-1.5,-22.5,0.0]),
              "usd_path": tb_usd_path_green
              }, 
             {"id": 2,
