@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import MultiArrayDimension, Float32MultiArray
@@ -7,6 +8,9 @@ from geometry_msgs.msg import Twist
 import numpy as np
 import time
 from datetime import datetime
+import os
+
+WS_DIR = '/home/eggs/humble_mapf/src/mapf_isaac'
 
 class PathFollowing(Node):
     def __init__(self):
@@ -56,7 +60,7 @@ class PathFollowing(Node):
                     self.robot_path[robot] = None
                     self.robot_time[robot]['end'] = time.time()
                     self.robot_time[robot]['duration'] = self.robot_time[robot]['end'] - self.robot_time[robot]['start']
-                    self.log_robot_time(robot)
+                    # self.log_robot_time(robot)
                     continue
                 
                 self.robot_cur_goal[robot] = np.array(self.robot_path[robot][0][:2])
@@ -118,6 +122,7 @@ class PathFollowing(Node):
         return angle
     
     def tb_path_receive(self, msg):
+        # print(f"Received path for robot {msg.tb_id}")
         tb_id = msg.tb_id
         data = msg.listofpath.data
         dim0_size = msg.listofpath.layout.dim[0].size
@@ -125,6 +130,8 @@ class PathFollowing(Node):
         re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
         robot_id = f'robot{tb_id}'
         self.robot_path[robot_id] = re_tb_path
+        # print(f"Robot {robot_id} path: {re_tb_path}")
+        # print()
         
         # Reset movement counters
         self.robot_movements[robot_id]['straight'] = 0
@@ -156,7 +163,8 @@ class PathFollowing(Node):
             f"Rotate: {self.robot_movements[robot_id]['rotate']}")
 
     def log_robot_time(self, robot):
-        with open('result/pathfollowing.txt', 'a') as f:
+        os.makedirs(f'{WS_DIR}/result', exist_ok=True)
+        with open(f'{WS_DIR}/result/pathfollowing.txt', 'a') as f:
             f.write(f"{'='*50}\n")
             f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Robot: {robot}\n")
@@ -184,7 +192,9 @@ class PathFollowing(Node):
         total_time = max(completed_durations)
         total_straight, total_rotate = self.calculate_total_movements()
         
-        with open('result/pathfollowing.txt', 'a') as f:
+        # Ensure the directory exists
+        os.makedirs(f'{WS_DIR}/result', exist_ok=True)
+        with open(f'{WS_DIR}/result/pathfollowing.txt', 'a') as f:
             f.write(f"{'#'*50}\n")
             f.write(f"OVERALL MISSION SUMMARY\n")
             f.write(f"{'#'*50}\n")

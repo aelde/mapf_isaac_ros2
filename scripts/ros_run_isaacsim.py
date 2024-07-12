@@ -26,7 +26,7 @@ defaults = {
     "use_internal_libs": False,
     "dds_type": "fastdds",
     "gui": "",
-    "standalone": "/home/eggs/humble_mapf/src/mapf_isaac/scripts/isaac_ros2_ui.py",
+    "standalone": "/home/eggs/humble_mapf/src/mapf_isaac/scripts/ex_isaac_ros2_ui.py",
     "play_sim_on_start": False,
     "ros_distro_var": "humble",
     "ros_installation_path": ""

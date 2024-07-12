@@ -4,3 +4,4 @@ map/__pycache__
 cbs_test/
 scripts/__pycache__
 all_planner/__pycache__
+.env

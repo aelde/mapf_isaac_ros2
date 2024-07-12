@@ -10,15 +10,22 @@ import yaml
 from datetime import datetime
 import time
 import sys
-from map.map import obstacles_1
+from map._map import obstacles_1
 import glob
-from planner_control import PlannerControl
+from dotenv import load_dotenv
+from all_planner.ex_planner_control import PlannerControl
+from all_planner.ex_me_visualizer import Visualizer
+load_dotenv()
 
 MAP_NAME = 'cbs_2'
 
+WS_DIR = '/home/eggs/humble_mapf/src/mapf_isaac'
+
 def load_uneven_astar_config():
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'uneven_astar.yaml')
-    with open(config_path, 'r') as file:
+    config_dir = 'config/uneven_astar.yaml'
+    config_d = os.path.join(WS_DIR, config_dir)
+    print(f'astar config dir: {config_d}')
+    with open(config_d, 'r') as file:
         config = yaml.safe_load(file)
     return config['costs']
 
@@ -38,7 +45,9 @@ def import_mapf_instance(filename):
     return my_map 
 
 def glob_map_files():
-    map_files = glob.glob(os.path.join(os.path.dirname(__file__), '..','map', f'{MAP_NAME}.txt'))
+    config_dir = f'map/{MAP_NAME}.txt'
+    config_d = os.path.join(WS_DIR, config_dir)
+    map_files = glob.glob(config_d)
     if map_files:
         print(f'Map files found: {map_files}')
         return import_mapf_instance(map_files[0])  # Use the first file found
@@ -104,6 +113,7 @@ class RosPathPlanner(Node):
 
     def sub_tb_job_callback(self, msg):
         self.tb_queue_job_task.append([msg.tb_id, np.array([msg.tb_goal.x, msg.tb_goal.y, msg.tb_goal.z])])
+        self.tb_queue_job_task = sorted(self.tb_queue_job_task, key=lambda x: x[0])
         for task in self.tb_queue_job_task:
             if task[0] == msg.tb_id:
                 self.tb_pos[msg.tb_id - 1]["goal_pos"] = task[1]
@@ -121,36 +131,56 @@ class RosPathPlanner(Node):
         print(f'************************************')
         starts = [(self.tb_pos[i]["start_pos"][:2]) for i in range(len(self.tb_pos))]
         goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
-        conv_starts = [convert_pos_to_normal(starts[i]) for i in range(len(starts))]
-        conv_goals = [convert_pos_to_normal(goals[i]) for i in range(len(goals))]
+        normal_start = [convert_pos_to_normal(starts[i]) for i in range(len(starts))]
+        normal_goals = [convert_pos_to_normal(goals[i]) for i in range(len(goals))]
         print(f'Starts: \n{starts}')
         print(f'Gaols: \n{goals}')
-        print(f'Converted Starts: \n{conv_starts}')
-        print(f'Converted Goals: \n{conv_goals}')
+        print(f'Converted Starts: \n{normal_start}')
+        print(f'Converted Goals: \n{normal_goals}')
         print()
         
-        all_paths = PlannerControl().plan_paths(self.map, conv_starts, conv_goals)
+        solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
+        paths, nodes_gen, nodes_exp = solution[:3]
+        all_paths = paths # 0 - n
+        all_paths_conv = [np.array([convert_normal_to_pos(point) for point in path]) for path in paths] 
         print(f'All paths: ')
-        print(all_paths)
-        # all_paths = self.planner_control.plan_multiple_paths(tasks, self.tb_pos)
-
-        # if all_paths:
-        #     print(f'All paths: ')
-        #     for i, path in enumerate(all_paths):
-        #         print(f'TB_{tasks[i][0]}: {path}')
+        for i in all_paths[0]: print(i)
+        # print(all_paths)
+        print()
+        print(f'All paths converted: ')
+        # print(all_paths_conv)
+        for i in all_paths_conv[0]: print(i)
+        print()
+        
+        # visualize each path
+        for i, path in enumerate(all_paths_conv):
+            Visualizer.visualize_path(obstacles_1, i+1, starts[i], goals[i], path)
+        # visualize all paths
+        Visualizer.visualize_all_paths(obstacles_1, all_paths_conv, starts, goals)
+        
+        # visualize animate
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)
+        
+        if all_paths_conv:
+            print(f'All paths: ')
+            for i, path in enumerate(all_paths_conv):
+                print(f'TB_{tasks[i][0]}: {path}')
             
-        #     sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
-        #     sorted_paths = [all_paths[i] for i in sorted_indices]
-        #     sorted_tb_id = [tasks[i][0] for i in sorted_indices]
+            sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
+            # sorted_paths = [all_paths_conv[i] for i in sorted_indices]
+            sorted_tb_id = [tasks[i][0] for i in sorted_indices]
             
-        #     print(f'/*/*/*/*/*/*/*/*/*/*/*/')
-        #     print(f'Sorted TB IDs: ')
-        #     for i, tb_id in enumerate(sorted_tb_id):
-        #         print(f'TB_{tb_id}: {sorted_paths[i]}')
+            # now all_paths_conv is 2d array , must convert to 3d array
+            all_paths_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_paths_conv]
+            for i, path in enumerate(all_paths_conv_3d):
+                print(f'TB_{tasks[i][0]}: {path}')
             
-        #     self.pub_tb_path(sorted_tb_id, sorted_paths)
-        # else:
-        #     print("No valid paths found for any robots")
+            self.pub_tb_path(sorted_tb_id, all_paths_conv_3d)
+            # self.pub_tb_path(sorted_tb_id, sorted_paths)
+        else:
+            print("No valid paths found for any robots")
+            
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)
         
         self.tb_queue_job_task = []
 

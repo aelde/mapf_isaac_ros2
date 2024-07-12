@@ -1,5 +1,5 @@
 import random
-from all_planner import cbs_basic, a_star_class ,single_agent_planner, visualize
+import cbs_basic, a_star_class ,single_agent_planner, visualize
 import numpy as np
 
 D_HISOVLER = 'CBS'
@@ -17,14 +17,15 @@ class PlannerControl:
         cbs = cbs_basic.CBSSolver(map,start_pos,goal_pos)
         solution = cbs.find_solution(False)
         paths, nodes_gen, nodes_exp = solution[:3]
-        PlannerControl.print_solution(solution)
-        PlannerControl.show_animation(map, start_pos, goal_pos, paths)
+        # PlannerControl.print_solution(solution)
+        # PlannerControl.show_animation(map, start_pos, goal_pos, paths)
         return solution
     
     @staticmethod
     def print_solution(solution):
         paths, nodes_gen, nodes_exp = solution[:3]
         print(f'found solution!!!!!*/*/!')
+        print()
         
     @staticmethod   
     def show_animation(map, start_pos, goal_pos, paths):

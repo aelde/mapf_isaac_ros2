@@ -109,7 +109,8 @@ class Visualizer:
         
         print(f'A* step visualization saved as {filename}')
 
-    def visualize_path(self, tb_id, start_pos, goal_pos, path):
+    @staticmethod
+    def visualize_path(obstacles, tb_id, start_pos, goal_pos, path):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title(f'Path Planning for TB_{tb_id}')
         
@@ -123,7 +124,7 @@ class Visualizer:
         ax.set_yticks(np.arange(-13.5, 14.5, 3))
         ax.grid(True)
 
-        obstacles = self.obstacles[:, :2]
+        obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
         ax.scatter(start_pos[1], start_pos[0], c='c', marker='o', s=200, label='Start')
@@ -138,7 +139,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = 'result/path'
+        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
@@ -150,7 +151,8 @@ class Visualizer:
         
         print(f'Path visualization saved as {filename}')
 
-    def visualize_all_paths(self, all_paths, all_starts, all_goals):
+    @staticmethod
+    def visualize_all_paths(obstacles, all_paths, all_starts, all_goals):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title('Path Planning for All TBs')
         
@@ -160,18 +162,21 @@ class Visualizer:
         ax.set_yticks(np.arange(-13.5, 14.5, 3))
         ax.grid(True)
 
-        obstacles = self.obstacles[:, :2]
+        obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
         colors = ['g', 'r', 'b']
         
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
-            print(f'tb number: {i+1} :: color: {colors[i]} :: start: {start}')
+            # print(f'tb number: {i+1} :: color: {colors[i]} :: start: {start}')
             path = np.array(path)
             if path.size > 0:
                 ax.plot(path[:, 1], path[:, 0], color=colors[i], linestyle='-', linewidth=2, label=f'Path TB_{i+1}')
             ax.scatter(start[1], start[0], c='c', marker='o', s=200)
             ax.scatter(goal[1], goal[0], c='m', marker='*', s=200)
+        # Add labels for the start and goal points
+        ax.scatter([], [], c='c', marker='o', s=200, label='Start')
+        ax.scatter([], [], c='m', marker='*', s=200, label='Goal')
         
         ax.set_aspect('equal', 'box')
         ax.set_xlabel('Y')
@@ -180,7 +185,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = 'result/path'
+        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         

@@ -23,13 +23,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_python_install_package(scripts)
 install(PROGRAMS
-  scripts/testpub.py
-  scripts/testsub.py
-  scripts/run_isaacsim.py
-  scripts/astar_pathplanner_new.py
-  scripts/tb_pathfollowing.py
-  scripts/tbJob_service_server.py
-  scripts/pathfollow_short.py
+  scripts/ros_pathfollow_short_plus.py
+  scripts/ros_tbJob_service_server.py
+  scripts/ros_planner_v1.py
+  scripts/ros_run_isaacsim.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
