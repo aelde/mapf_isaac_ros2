@@ -113,18 +113,33 @@ class RosPathPlanner(Node):
 
     def sub_tb_job_callback(self, msg):
         self.tb_queue_job_task.append([msg.tb_id, np.array([msg.tb_goal.x, msg.tb_goal.y, msg.tb_goal.z])])
-        self.tb_queue_job_task = sorted(self.tb_queue_job_task, key=lambda x: x[0])
-        for task in self.tb_queue_job_task:
-            if task[0] == msg.tb_id:
-                self.tb_pos[msg.tb_id - 1]["goal_pos"] = task[1]
-            print(task)
-        print(f'-----')
+        print(f'tb_queue: \n{self.tb_queue_job_task}')
+        print(f'****')
         
         if msg.start_routing:
+            open_start = [i["start_pos"] for i in self.tb_pos]
+            print(f'open_start: \n{open_start}')
+            for i in range(len(self.tb_queue_job_task)): # calculate norm from tb_queue_job_task[0] - tb_queue_job_task[n]
+                minn_norm = round(min(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]) for j in range(len(open_start))),2)
+                print(f'tb_queue_{i}: {self.tb_queue_job_task[i][1][:2]}')
+                print(f'minn_norm: {minn_norm}')
+                # minnn = min(self.tb_pos, key=lambda x: np.linalg.norm(self.tb_queue_job_task[i][1][:2] - np.array(x['start_pos'][:2])))
+                # print(f'minnn: \n{minnn}')
+                for j in self.tb_pos:
+                    if minn_norm == round(np.linalg.norm(self.tb_queue_job_task[i][1][:2] - j["start_pos"][:2]), 2):
+                        j["goal_pos"] = self.tb_queue_job_task[i][1] 
+                        print(f'j: {j["start_pos"]}')
+                        open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
+                        print(f'open_start_{i}: {open_start}')
+            
+            print('Ending sub_tb_job_callback...')
+            for i in self.tb_pos: print(i)
+            
             self.plan_and_publish_paths()
     
     def plan_and_publish_paths(self):
-        tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
+        # tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]
+        tasks = [(i["id"], i["goal_pos"]) for i in self.tb_pos]
         print(f'Tasks: {tasks}')
         print(f'TB Pos:')
         for tb in self.tb_pos: print(tb)

@@ -234,11 +234,13 @@ class Visualizer:
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
             path = np.array(path)
             if path.size > 0:
-                # Offset the path
-                offset_path = offset_curve(path[:, 0], path[:, 1], offsets[i])
-                
-                # Plot the offset path
-                ax.plot(offset_path[:, 1], offset_path[:, 0], color=colors[i], linestyle='-', linewidth=2, label=f'Path TB_{i+1}')
+                if len(path) > 1:
+                    # Offset the path only if there's more than one point
+                    offset_path = offset_curve(path[:, 0], path[:, 1], offsets[i])
+                    ax.plot(offset_path[:, 1], offset_path[:, 0], color=colors[i], linestyle='-', linewidth=2, label=f'Path TB_{i+1}')
+                else:
+                    # If there's only one point, just plot it without offsetting
+                    ax.plot(path[0, 1], path[0, 0], color=colors[i], marker='o', markersize=8, label=f'Path TB_{i+1}')
             
             ax.scatter(start[1], start[0], c=colors[i], marker='o', s=200)
             ax.scatter(goal[1], goal[0], c=colors[i], marker='*', s=200)

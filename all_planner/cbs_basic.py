@@ -1,9 +1,213 @@
 import time as timer
 import heapq
 import random
-
+import matplotlib.pyplot as plt
 from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import to_rgba
+import os
 
+def each_astar_step(my_map, starts, goals, heuristics, all_paths, constraints, step):
+    n_x = len(my_map)
+    n_y = len(my_map[0])
+    num_agents = len(starts)
+    
+    colors = ['lime', 'deeppink', 'blue']
+    
+    for agent in range(num_agents):
+        fig, ax = plt.subplots(figsize=(8, 8))
+        fig.suptitle(f'Agent {agent} - Step {step}', fontsize=16)
+        
+        # Create a heatmap of the map (obstacles)
+        ax.imshow(my_map, cmap='binary')
+        
+        # Plot heuristic values for this agent
+        for x in range(n_x):
+            for y in range(n_y):
+                if (x, y) in heuristics[agent]:
+                    h_value = heuristics[agent][(x, y)]
+                    ax.text(y, x, f'{h_value}', ha='center', va='center', fontsize=6, 
+                            color='red' if my_map[x][y] else 'black')
+        
+        # Plot constraints for this agent
+        for constraint in constraints:
+            if constraint['timestep'] == step and constraint['agent'] == agent:
+                if len(constraint['loc']) == 1:
+                    ax.add_patch(plt.Circle((constraint['loc'][0][1], constraint['loc'][0][0]), 0.3, color='red', fill=False))
+                else:
+                    ax.add_patch(plt.Rectangle((min(constraint['loc'][0][1], constraint['loc'][1][1]) - 0.5, 
+                                                min(constraint['loc'][0][0], constraint['loc'][1][0]) - 0.5), 
+                                               1, 1, color='red', fill=False))
+        
+        # Plot all paths explored by this agent
+        for i, paths in enumerate(all_paths):
+            if agent < len(paths) and paths[agent]:  # Check if path exists for this agent
+                path = paths[agent]
+                if step < len(path):
+                    current_pos = path[step]
+                    path_color = to_rgba(colors[agent], alpha=0.1 + 0.8 * (i / len(all_paths)))
+                    
+                    # Plot path up to current step
+                    path_x = [pos[1] for pos in path[:step+1]]
+                    path_y = [pos[0] for pos in path[:step+1]]
+                    ax.plot(path_x, path_y, '-', color=path_color, linewidth=2)
+                    
+                    # Plot current position for the most recent path
+                    if i == len(all_paths) - 1:
+                        ax.plot(current_pos[1], current_pos[0], 'o', color=colors[agent], markersize=10, label=f'Current Position')
+        
+        # Plot start and goal positions
+        ax.plot(starts[agent][1], starts[agent][0], 's', color=colors[agent], markersize=8, markerfacecolor='none', label='Start')
+        ax.plot(goals[agent][1], goals[agent][0], '*', color=colors[agent], markersize=10, label='Goal')
+        
+        # Set major ticks
+        ax.set_xticks(np.arange(0, n_y, 1))
+        ax.set_yticks(np.arange(0, n_x, 1))
+        
+        # Label major ticks
+        ax.set_xticklabels(np.arange(0, n_y, 1))
+        ax.set_yticklabels(np.arange(0, n_x, 1))
+        
+        # Add gridlines
+        ax.grid(which='major', color='gray', linestyle='-', linewidth=0.5)
+        
+        # Set labels
+        ax.set_xlabel('Y')
+        ax.set_ylabel('X')
+        
+        # Add legend
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=2)
+        
+        # Save the figure
+        os.makedirs(f'result/agent_{agent}', exist_ok=True)
+        plt.savefig(f'result/agent_{agent}/step_{step:03d}.png', dpi=300, bbox_inches='tight')
+        plt.close(fig)
+
+def astar_step(my_map, starts, goals, heuristics, paths, constraints, step):
+    n_x = len(my_map)
+    n_y = len(my_map[0])
+    num_agents = len(starts)
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.suptitle(f'A* Step {step}', fontsize=16)
+    
+    colors = ['lime', 'deeppink', 'blue']
+    
+    # Create a heatmap of the map (obstacles)
+    ax.imshow(my_map, cmap='binary')
+    
+    # Plot heuristic values
+    for x in range(n_x):
+        for y in range(n_y):
+            for i in range(num_agents):
+                if (x, y) in heuristics[i]:
+                    h_value = heuristics[i][(x, y)]
+                    ax.text(y, x, f'{h_value}', ha='center', va='center', fontsize=6, 
+                            color='red' if my_map[x][y] else 'black')
+    
+    # Plot constraints
+    for constraint in constraints:
+        if constraint['timestep'] == step:
+            if len(constraint['loc']) == 1:
+                ax.add_patch(plt.Circle((constraint['loc'][0][1], constraint['loc'][0][0]), 0.3, color='red', fill=False))
+            else:
+                ax.add_patch(plt.Rectangle((min(constraint['loc'][0][1], constraint['loc'][1][1]) - 0.5, 
+                                            min(constraint['loc'][0][0], constraint['loc'][1][0]) - 0.5), 
+                                           1, 1, color='red', fill=False))
+    
+    # Plot current positions and paths
+    for i in range(num_agents):
+        if step < len(paths[i]):
+            current_pos = paths[i][step]
+            ax.plot(current_pos[1], current_pos[0], 'o', color=colors[i], markersize=10, label=f'Agent {i}')
+            
+            # Plot path up to current step
+            path_x = [pos[1] for pos in paths[i][:step+1]]
+            path_y = [pos[0] for pos in paths[i][:step+1]]
+            ax.plot(path_x, path_y, '-', color=colors[i], linewidth=2, alpha=0.5)
+        
+        # Plot start and goal positions
+        ax.plot(starts[i][1], starts[i][0], 's', color=colors[i], markersize=8, markerfacecolor='none')
+        ax.plot(goals[i][1], goals[i][0], '*', color=colors[i], markersize=10)
+    
+    # Set major ticks
+    ax.set_xticks(np.arange(0, n_y, 1))
+    ax.set_yticks(np.arange(0, n_x, 1))
+    
+    # Label major ticks
+    ax.set_xticklabels(np.arange(0, n_y, 1))
+    ax.set_yticklabels(np.arange(0, n_x, 1))
+    
+    # Add gridlines
+    ax.grid(which='major', color='gray', linestyle='-', linewidth=0.5)
+    
+    # Set labels
+    ax.set_xlabel('Y')
+    ax.set_ylabel('X')
+    
+    # Add legend
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3)
+    
+    # Save the figure
+    os.makedirs('result', exist_ok=True)
+    plt.savefig(f'result/step_{step:03d}.png', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
+    n_x = len(my_map)
+    n_y = len(my_map[0])
+    num_agents = len(starts)
+    
+    fig, axs = plt.subplots(1, num_agents, figsize=(6*num_agents, 6), squeeze=False)
+    fig.suptitle('Map Visualization with Start, Goal Positions, and Heuristics', fontsize=16)
+    
+    colors = ['lime', 'deeppink', 'blue']
+    
+    for i in range(num_agents):
+        ax = axs[0, i]
+        
+        # Create a heatmap of the map (obstacles)
+        ax.imshow(my_map, cmap='binary')
+        
+        # Plot heuristic values
+        for x in range(n_x):
+            for y in range(n_y):
+                if (x, y) in heuristics[i]:
+                    h_value = heuristics[i][(x, y)]
+                    ax.text(y, x, f'{h_value}', ha='center', va='center', fontsize=6, 
+                            color='red' if my_map[x][y] else 'black')
+        
+        # Plot start position
+        ax.plot(starts[i][1], starts[i][0], 'o', color=colors[i], markersize=10, label=f'Start {i}')
+        
+        # Plot goal position
+        ax.plot(goals[i][1], goals[i][0], '*', color=colors[i], markersize=10, label=f'Goal {i}')
+        
+        # Set major ticks
+        ax.set_xticks(np.arange(0, n_y, 1))
+        ax.set_yticks(np.arange(0, n_x, 1))
+        
+        # Label major ticks
+        ax.set_xticklabels(np.arange(0, n_y, 1))
+        ax.set_yticklabels(np.arange(0, n_x, 1))
+        
+        # Add gridlines
+        ax.grid(which='major', color='gray', linestyle='-', linewidth=0.5)
+        
+        # Set labels and title
+        ax.set_xlabel('Y')
+        ax.set_ylabel('X')
+        ax.set_title(f'Agent {i}')
+        
+        # Invert y-axis to match the coordinate system in the code
+        # ax.invert_yaxis()
+        
+        # Add legend
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15))
+        
+    plt.tight_layout()
+    plt.show()
 
 def detect_collision(path1, path2):
     ##############################
@@ -174,6 +378,10 @@ class CBSSolver(object):
         for goal in self.goals:
             self.heuristics.append(compute_heuristics(my_map, goal))
 
+    
+        # visualize_map(self.my_map, self.starts, self.goals, self.heuristics)
+        visualize_map_and_heuristics(self.my_map, self.starts, self.goals, self.heuristics)
+        
     def push_node(self, node):
         heapq.heappush(self.open_list, (node['cost'], len(
             node['collisions']), self.num_of_generated, node))
@@ -217,11 +425,24 @@ class CBSSolver(object):
             astar = AStar(self.my_map, self.starts, self.goals,
                           self.heuristics, i, root['constraints'])
             path = astar.find_paths()
-
+            # print(f'i: {i}, path: {path[0]}')
+            me_map_pos = []
+            for i in path[0]: me_map_pos.append(convert_normal_to_pos(i))
+            print(me_map_pos)
             if path is None:
                 raise BaseException('No solutions')
+            
+            print("Agent ", i)
+            print('PATHS: ', root['paths'])
             root['paths'].append(path[0])
 
+        # Initialize all_paths with the root paths
+        all_paths = [root['paths']]
+        
+        # Visualize initial state
+        # astar_step(self.my_map, self.starts, self.goals, self.heuristics, root['paths'], root['constraints'], 0)
+        # each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, root['constraints'], 0)
+        
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
         self.push_node(root)
@@ -239,8 +460,10 @@ class CBSSolver(object):
             # if self.num_of_generated > 50000:
             #     print('reached maximum number of nodes. Returning...')
             #     return None
+            print("Open list: ", self.open_list)
             p = self.pop_node()
             if p['collisions'] == []:
+                #*******************************************************************************************************
                 mypos = {
                     'agent_0': [],
                     'agent_1': [],
@@ -262,6 +485,20 @@ class CBSSolver(object):
             # constraints = standard_splitting(collision)
             # constraints = disjoint_splitting(collision)
             constraints = splitter(collision)
+                #*******************************************************************************************************
+            
+            ############################################################################################################
+            # Visualize final solution
+                # max_path_length = max(len(path) for path in p['paths'])
+                # for step in range(max_path_length):
+                #     astar_step(self.my_map, self.starts, self.goals, self.heuristics, p['paths'], p['constraints'], step)
+                #     each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, p['constraints'], step)
+                # return p['paths'], self.num_of_generated, self.num_of_expanded
+            ############################################################################################################
+
+            # collision = p['collisions'].pop(0) 
+            # constraints = splitter(collision)
+
 
             for constraint in constraints:
                 q = {'cost': 0,
@@ -282,6 +519,13 @@ class CBSSolver(object):
 
                 if path is not None:
                     q['paths'][ai] = path[0]
+                    
+                     # Visualize each step of the new solution
+                    # max_path_length = max(len(path) for path in q['paths'])
+                    # for step in range(max_path_length):
+                    #     astar_step(self.my_map, self.starts, self.goals, self.heuristics, q['paths'], q['constraints'], step)
+                    #     each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, q['constraints'], step)
+                        
                     # task 4
                     continue_flag = False
                     if constraint['positive']:
@@ -317,5 +561,6 @@ class CBSSolver(object):
             print("agent", i, ": ", node['paths'][i])
 
 
+    
 def convert_normal_to_pos(pos):
     return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)

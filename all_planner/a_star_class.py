@@ -17,15 +17,27 @@ def get_sum_of_cost(paths):
             assert path[-1] != path[-2]
     return rst
 
+    
+def convert_normal_to_pos(pos):
+    return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
+
+
 def compute_heuristics(my_map, goal):
+    print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
     # Use Dijkstra to build a shortest-path tree rooted at the goal location
     open_list = []
     closed_list = dict()
     root = {'loc': goal, 'cost': 0}
     heapq.heappush(open_list, (root['cost'], goal, root))
+    # print
     closed_list[goal] = root
+    count = 0
     while len(open_list) > 0:
+        count += 1
+        # print(f'count: {count}')
+        print(f'o_ {count-1}, {open_list}')
         (cost, loc, curr) = heapq.heappop(open_list)
+        # for i,j in enumerate(open_list): print(f'o_ {i}, {j}')
         for dir in range(4):
             child_loc = move(loc, dir)
             child_cost = cost + 1
@@ -44,6 +56,11 @@ def compute_heuristics(my_map, goal):
                 closed_list[child_loc] = child
                 heapq.heappush(open_list, (child_cost, child_loc, child))
 
+    print(f'len open is : {len(open_list)}')
+    print(f'len close is : {len(closed_list)}')
+    print(f'close: of {goal} , {convert_normal_to_pos(goal)}')
+    for i,j in enumerate(closed_list.items()): print(f'c_ {i}, {j}')
+    
     # build the heuristics table
     h_values = dict()
     for loc, node in closed_list.items():
@@ -72,7 +89,7 @@ def get_path(goal_node,meta_agent):
         path[i].reverse()
         assert path[i] is not None
 
-        print(path[i])
+        print(f'get_path: {path[i]}')
 
         if len(path[i]) > 1: 
             # remove trailing duplicates
@@ -130,15 +147,18 @@ class A_Star(object):
 
 
     def push_node(self, node):
+        # print('hey push_node...')
         f_value = node['g_val'] + node['h_val']
 
         heapq.heappush(self.open_list, (f_value, node['h_val'], node['loc'], self.num_generated, node))
         self.num_generated += 1
+        print(f'num_gen: {self.num_generated}')
         
     def pop_node(self):
         _,_,_, id, curr = heapq.heappop(self.open_list)
 
         self.num_expanded += 1
+        print(f'num_expan: {self.num_expanded}')
         return curr
 
     # return a table that constains the list of constraints of all agents for each time step. 
@@ -307,6 +327,7 @@ class A_Star(object):
 
             g_value = curr['g_val'] + num_moves
 
+            print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos(child_loc[0])}')
 
             reached_goal = [False for i in range(len(self.agents))]
 
@@ -334,6 +355,7 @@ class A_Star(object):
 
             children.append(child)
 
+            # print(f'children: \n{children}')
         return children
 
     def compare_nodes(self, n1, n2):
@@ -351,7 +373,10 @@ class A_Star(object):
 
         self.start_time = timer.time()
 
+        print(f'SELF.AGENTS: {self.agents}, {self.starts[0]}, {convert_normal_to_pos(self.starts[0])} ')
+
         print("> build constraint table")
+        
 
         for i, a in enumerate(self.agents):
             table_i = self.build_constraint_table(a)
@@ -362,7 +387,8 @@ class A_Star(object):
 
 
         h_value = sum([self.heuristics[i][self.starts[i]] for i in range(len(self.agents))])
-
+        print(f'h_value: {h_value}')
+        
         # assert h_value == h_test
 
         root = {'loc': [self.starts[j] for j in range(len(self.agents))],
@@ -387,18 +413,24 @@ class A_Star(object):
 
         self.push_node(root)
         self.closed_list[(tuple(root['loc']),root['timestep'])] = [root]
-
+        print(f'initial close: {self.closed_list}, len: {len(self.closed_list)}')
+        print(f'initial open: {self.open_list}, len: {len(self.open_list)}')
+        
         while len(self.open_list) > 0:
 
             # if num_node_generated >= 30:
             #     return
 
             curr = self.pop_node()
-
+            print(f'pop: {curr["loc"]}, {convert_normal_to_pos(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
+            
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
             # print(curr['reached_goal'] )
 
             if solution_found:
+                print(f'end... agent: {self.agents}')
+                # convert_normal_to_pos()
+                print(f'end_cuur ag_{self.agents}: \n{curr}')
                 return get_path(curr,self.agents)
 
 
