@@ -17,16 +17,21 @@ from all_planner.ex_planner_control import PlannerControl
 from all_planner.ex_me_visualizer import Visualizer
 load_dotenv()
 
-MAP_NAME = 'cbs_2'
-
-WS_DIR = '/home/eggs/humble_mapf/src/mapf_isaac'
+MAP_NAME = None
+TOTAL_ROBOTS = None
+WS_DIR = f'{os.getcwd()}/src/mapf_isaac/'
+print(WS_DIR)
 
 def load_uneven_astar_config():
     config_dir = 'config/uneven_astar.yaml'
-    config_d = os.path.join(WS_DIR, config_dir)
+    config_d = os.path.join(f'{WS_DIR}', config_dir)
     print(f'astar config dir: {config_d}')
     with open(config_d, 'r') as file:
         config = yaml.safe_load(file)
+        global MAP_NAME,TOTAL_ROBOTS,ROBOT_START
+        MAP_NAME = config['map']['map_name']
+        TOTAL_ROBOTS = config['robot']['total_robots']
+
     return config['costs']
 
 def convert_normal_to_pos(pos):
@@ -58,8 +63,9 @@ def glob_map_files():
 class RosPathPlanner(Node):
     def __init__(self):
         super().__init__('Astar_Path_Planner')
-        self.config = load_uneven_astar_config()
-        print(f"Costs: {self.config}")
+        self.astar_cost = load_uneven_astar_config()
+        print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}")
+        print(f"Costs: {self.astar_cost}")
 
         
         self.sub_task = self.create_subscription(TbTask, 'all_tb_job_task', self.sub_tb_job_callback, 10)
@@ -68,7 +74,7 @@ class RosPathPlanner(Node):
         
         self.tb_queue_job_task = []
         self.tb_pos = [
-            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": np.zeros(3)}
+            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": None}
             for i in range(1, 4)
         ]
         self.is_start = [True for i in range(3)]
@@ -77,7 +83,6 @@ class RosPathPlanner(Node):
             {"id": 2, "tstep": 0},
             {"id": 3, "tstep": 0},
         ]
-        print(f"Current working directory: {os.getcwd()}")
         self.map = glob_map_files()
         if self.map is None:
             self.get_logger().error('No map file found. Exiting.')
@@ -132,6 +137,10 @@ class RosPathPlanner(Node):
                         open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
                         print(f'open_start_{i}: {open_start}')
             
+            for i in self.tb_pos:
+                if i["goal_pos"] is not None: continue
+                else: i["goal_pos"] = i["start_pos"]
+            
             print('Ending sub_tb_job_callback...')
             for i in self.tb_pos: print(i)
             
@@ -148,6 +157,7 @@ class RosPathPlanner(Node):
         goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
         normal_start = [convert_pos_to_normal(starts[i]) for i in range(len(starts))]
         normal_goals = [convert_pos_to_normal(goals[i]) for i in range(len(goals))]
+        print(f'self.tb_pos len: {len(self.tb_pos)}')
         print(f'Starts: \n{starts}')
         print(f'Gaols: \n{goals}')
         print(f'Converted Starts: \n{normal_start}')

@@ -9,7 +9,7 @@
 
 from isaacsim import SimulationApp
 
-simulation_app = SimulationApp({"headless": True})
+simulation_app = SimulationApp({"headless": False})
 # simulation_app = SimulationApp({"renderer": "RayTracedLighting", "headless": False})
 
 import omni
@@ -29,6 +29,8 @@ from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.extensions import enable_extension
 import time
 import omni.isaac.core.utils.prims as prim_utils
+import os
+import yaml
 
 
 # enable ROS2 bridge extension
@@ -62,9 +64,36 @@ def create_link_graph(a_y,a_x,b_y,b_x):
     }
     return pos_rot
          
+MAP_NAME = None
+TOTAL_ROBOTS = None
+ROBOT_START = None
+WS_DIR = f'{os.getcwd()}'
+print(WS_DIR)
+
+def load_uneven_astar_config():
+    config_dir = 'config/uneven_astar.yaml'
+    config_d = os.path.join(f'{WS_DIR}', config_dir)
+    # print(f'astar config dir: {config_d}')
+    with open(config_d, 'r') as file:
+        config = yaml.safe_load(file)
+        global MAP_NAME,TOTAL_ROBOTS,ROBOT_START
+        MAP_NAME = config['map']['map_name']
+        robot_config = config['robot']
+        TOTAL_ROBOTS = robot_config['total_robots']
+        ROBOT_START = robot_config['robot_start']
+    # print(ROBOT_START)
+    return config['costs']
+
 class Subscriber(Node):
     def __init__(self):
         super().__init__("Simulation_Isaac_UI")
+        print('ffiofififi')
+        self.astar_cost = load_uneven_astar_config()
+        print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}\n")
+        print(f"Costs: {self.astar_cost}")
+        ROBOT_START
+        # for robot_id, position in ROBOT_START.items():
+        #     print(f"Robot {robot_id} start position: {position}")
 
         # setting up the world with a cube
         self.timeline = omni.timeline.get_timeline_interface()
@@ -92,27 +121,21 @@ class Subscriber(Node):
         )
         
         #-------------------- declare param
+
+        # c = green , red , blue
+        tb_color = [[0,1,0],[1,0,0],[0,0,1]]
+        tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue]
+        start_pos = [j for i,j in ROBOT_START.items()]
+        # print('start_pos :',start_pos)
+        
         self.tb_job = [
-            {"id": 1, 
-             "name": "tb_1",
-             "color": np.array([0,1,0]), #green
-             "start_pos": np.array([-1.5,-22.5,0.0]),
-             "usd_path": tb_usd_path_green
-             }, 
-            {"id": 2,
-             "name": "tb_2",
-             "color": np.array([1,0,0]), #red
-             "start_pos" : np.array([7.5,19.5,0.0]),
-             "usd_path": tb_usd_path_red
-             }, 
-            {"id": 3,
-             "name": "tb_3",
-             "color": np.array([0,0,1]), #blue
-             "start_pos" : np.array([4.5,-16.5,0.0]),
-             "usd_path": tb_usd_path_blue
-             }, 
-            # {"id": 3, "name": "tb_3", "color": np.array([0,0,1])},  # Blue color for the third link
-            # Add more job entries as needed
+            {
+                "id" : i,
+                "name": f'tb_{i}',
+                "color": tb_color[i-1],
+                "start_pos": np.array(start_pos[i-1]),
+                "usd_path": tb_usd_path[i-1]
+            } for i in range(1,TOTAL_ROBOTS+1)
         ]
         
         for i in range(len(self.tb_job)):

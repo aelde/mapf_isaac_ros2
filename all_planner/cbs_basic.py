@@ -570,7 +570,5 @@ class CBSSolver(object):
                 my_pos.append(convert_normal_to_pos(node['paths'][i][0]))
             print("agent", i, ": ", node['paths'][i])
 
-
-    
 def convert_normal_to_pos(pos):
     return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)

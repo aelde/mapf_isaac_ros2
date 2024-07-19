@@ -39,7 +39,7 @@ def compute_heuristics(my_map, goal):
     while len(open_list) > 0:
         count += 1
         # print(f'count: {count}')
-        print(f'o_ {count-1}, {open_list}')
+        # print(f'o_ {count-1}, {open_list}')
         (cost, loc, curr) = heapq.heappop(open_list)
         # for i,j in enumerate(open_list): print(f'o_ {i}, {j}')
         for dir in range(4):
@@ -528,7 +528,7 @@ class A_Star(object):
             # if (tuple(curr['loc']),curr['timestep']) not in self.closed_list:
             #     self.closed_list[(tuple(curr['loc']),curr['timestep'])] = curr
             
-            # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
+            self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
             step_count += 1
         print('no solution')
 
@@ -541,7 +541,7 @@ class A_Star(object):
         n_x, n_y = len(my_map), len(my_map[0])
         
         fig, ax = plt.subplots(figsize=(n_y, n_x))
-        ax.set_title(f'A* Step {step_count} for Robot {self.agents+1}')
+        ax.set_title(f'A* Step {step_count} for Robot {self.agents[0]+1}')
         
         # Set up the plot
         ax.set_xticks(np.arange(0, n_y, 1))
