@@ -20,6 +20,8 @@ def offset_curve(xs, ys, offset):
     
     return path.vertices + offset * normal_vectors
 
+RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+
 class Visualizer:
     def __init__(self):
         self.obstacles = np.array([
@@ -68,7 +70,7 @@ class Visualizer:
         ax.set_xlim(-28.5, 28.5)
         ax.set_ylim(-16.5, 16.5)
         ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        ax.set_yticks(np.arange(-16.5, 17.5, 3))
         ax.grid(True)
 
         obstacles = self.obstacles[:, :2]
@@ -116,7 +118,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = 'result/astar_steps'
+        result_dir = RESULT_DIR
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
@@ -156,7 +158,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+        result_dir = RESULT_DIR
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
@@ -202,7 +204,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+        result_dir = RESULT_DIR
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
@@ -256,7 +258,7 @@ class Visualizer:
         
         plt.gca().invert_yaxis()
         
-        result_dir = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+        result_dir = RESULT_DIR
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         

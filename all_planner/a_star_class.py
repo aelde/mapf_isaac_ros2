@@ -3,6 +3,10 @@ import heapq
 from itertools import product
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
+import os
+
+RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result'
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
@@ -23,7 +27,7 @@ def convert_normal_to_pos(pos):
 
 
 def compute_heuristics(my_map, goal):
-    print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
+    # print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
     # Use Dijkstra to build a shortest-path tree rooted at the goal location
     open_list = []
     closed_list = dict()
@@ -56,10 +60,11 @@ def compute_heuristics(my_map, goal):
                 closed_list[child_loc] = child
                 heapq.heappush(open_list, (child_cost, child_loc, child))
 
-    print(f'len open is : {len(open_list)}')
-    print(f'len close is : {len(closed_list)}')
-    print(f'close: of {goal} , {convert_normal_to_pos(goal)}')
-    for i,j in enumerate(closed_list.items()): print(f'c_ {i}, {j}')
+    # print(f'len open is : {len(open_list)}')
+    # print(f'len close is : {len(closed_list)}')
+    # print(f'close: of {goal} , {convert_normal_to_pos(goal)}')
+    # for i,j in enumerate(closed_list.items()): 
+        # print(f'c_ {i}, {j}')
     
     # build the heuristics table
     h_values = dict()
@@ -105,7 +110,7 @@ def get_path(goal_node,meta_agent):
 
 class A_Star(object):
 
-    def __init__(self,my_map,starts,goals,heuristics,agents,contraints):
+    def __init__(self,my_map,starts,goals,heuristics,agents,contraints,g_cost):
         """my_map   - list of lists specifying obstacle positions
         starts      - [(x1, y1), (x2, y2), ...] list of start locations for CBS
         goals       - [(x1, y1), (x2, y2), ...] list of goal locations for CBS
@@ -123,6 +128,11 @@ class A_Star(object):
         self.open_list = []
         self.closed_list = dict()
 
+        self.g_cost = g_cost
+        print(f'G_COST: {g_cost}')
+        # print(f'str_g: {g_cost["straight"]}')
+        # print(f'le_g: {g_cost["rotate_left"]}')
+        # print(f'ri_g: {g_cost["rotate_right"]}')
         
         self.constraints = contraints # to be used to create c_table
 
@@ -149,10 +159,10 @@ class A_Star(object):
     def push_node(self, node):
         # print('hey push_node...')
         f_value = node['g_val'] + node['h_val']
-
+        print(f'f: {f_value}')
         heapq.heappush(self.open_list, (f_value, node['h_val'], node['loc'], self.num_generated, node))
         self.num_generated += 1
-        print(f'num_gen: {self.num_generated}')
+        # print(f'num_gen: {self.num_generated}')
         
     def pop_node(self):
         _,_,_, id, curr = heapq.heappop(self.open_list)
@@ -324,8 +334,54 @@ class A_Star(object):
             # g_value = curr['g_val']+ curr['reached_goal'].count(False)
             num_moves = curr['reached_goal'].count(False)
             # print("(edge) cost (curr -> child) in a* tree == ", num_moves)
-
-            g_value = curr['g_val'] + num_moves
+            
+            
+            '''*************** new g cost cal ***************'''
+            if curr['parent'] is not None:
+                parent_locc = np.array(curr['parent']['loc'])
+            else:
+                parent_locc = np.zeros(2)
+                # parent_locc = None  # or some default value
+            curr_locc = np.array(curr['loc'][0])
+            child_locc = np.array(child_loc[0])
+            print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
+            
+            direc = curr_locc - parent_locc
+            new_direction_str = np.array(child_loc) - np.array(curr_locc)
+            
+            needs_rotation = not np.array_equal(direc, new_direction_str) and not np.array_equal(direc, np.zeros(2))
+            cross_product = np.cross(direc, new_direction_str)
+            
+            # print(f'str_g: {g_cost["straight"]}')
+            # print(f'le_g: {g_cost["rotate_left"]}')
+            # print(f'ri_g: {g_cost["rotate_right"]}')
+            
+            straight_cost = self.g_cost["straight"]
+            rotate_left_cost = self.g_cost["rotate_left"]
+            rotate_right_cost = self.g_cost["rotate_right"]
+            
+            custom_g_cost = None
+            
+            if cross_product == 0:
+                pass
+                print(f'same loc or parent loc, no need rot! use: {straight_cost}')
+                custom_g_cost = straight_cost
+                # continue
+            elif needs_rotation:			
+                # print(f'cross_product: {cross_product}')
+                rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
+                custom_g_cost = rotation_cost
+                print(f"need rotation! use: {rotation_cost}")
+            else : 
+                pass
+                print(f"no need rotation! use: {straight_cost}")
+                custom_g_cost = straight_cost
+                # continue
+            
+            
+            # g_value = curr['g_val'] + num_moves
+            g_value = curr['g_val'] + custom_g_cost
+            '''***************"***************"***************'''
 
             print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos(child_loc[0])}')
 
@@ -373,7 +429,7 @@ class A_Star(object):
 
         self.start_time = timer.time()
 
-        print(f'SELF.AGENTS: {self.agents}, {self.starts[0]}, {convert_normal_to_pos(self.starts[0])} ')
+        # print(f'SELF.AGENTS: {self.agents}, {self.starts[0]}, {convert_normal_to_pos(self.starts[0])} ')
 
         print("> build constraint table")
         
@@ -387,7 +443,7 @@ class A_Star(object):
 
 
         h_value = sum([self.heuristics[i][self.starts[i]] for i in range(len(self.agents))])
-        print(f'h_value: {h_value}')
+        # print(f'h_value: {h_value}')
         
         # assert h_value == h_test
 
@@ -413,9 +469,10 @@ class A_Star(object):
 
         self.push_node(root)
         self.closed_list[(tuple(root['loc']),root['timestep'])] = [root]
-        print(f'initial close: {self.closed_list}, len: {len(self.closed_list)}')
-        print(f'initial open: {self.open_list}, len: {len(self.open_list)}')
+        # print(f'initial close: {self.closed_list}, len: {len(self.closed_list)}')
+        # print(f'initial open: {self.open_list}, len: {len(self.open_list)}')
         
+        step_count = 0
         while len(self.open_list) > 0:
 
             # if num_node_generated >= 30:
@@ -470,8 +527,141 @@ class A_Star(object):
 
             # if (tuple(curr['loc']),curr['timestep']) not in self.closed_list:
             #     self.closed_list[(tuple(curr['loc']),curr['timestep'])] = curr
-
+            
+            # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
+            step_count += 1
         print('no solution')
 
         # print("\nEND OF A*\n") # comment out if needed
         return None        
+
+    def visualize_each_step(self, curr, my_map, h_cost, children, step_count):
+        
+        # print(f'close_list vi: {self.closed_list}')
+        n_x, n_y = len(my_map), len(my_map[0])
+        
+        fig, ax = plt.subplots(figsize=(n_y, n_x))
+        ax.set_title(f'A* Step {step_count} for Robot {self.agents+1}')
+        
+        # Set up the plot
+        ax.set_xticks(np.arange(0, n_y, 1))
+        ax.set_yticks(np.arange(0, n_x, 1))
+        ax.grid(True)
+        
+        # Calculate g_cost and f_cost for each explored node in closed_list
+        g_cost = {}
+        f_cost = {}
+        explored_positions = set()
+        previous_curr_positions = set()
+        for (loc, timestep), nodes in self.closed_list.items():
+            if isinstance(nodes, list):
+                for node in nodes:
+                    for pos in loc:
+                        explored_positions.add(pos)
+                        if node['parent'] is None:  # This is a previous curr node
+                            previous_curr_positions.add(pos)
+                        if pos not in g_cost:
+                            g_cost[pos] = set()
+                            f_cost[pos] = set()
+                        g_cost[pos].add(node['g_val'])
+                        f_cost[pos].add(node['g_val'] + node['h_val'])
+            else:
+                node = nodes
+                for pos in loc:
+                    explored_positions.add(pos)
+                    if node['parent'] is None:  # This is a previous curr node
+                        previous_curr_positions.add(pos)
+                    if pos not in g_cost:
+                        g_cost[pos] = set()
+                        f_cost[pos] = set()
+                    g_cost[pos].add(node['g_val'])
+                    f_cost[pos].add(node['g_val'] + node['h_val'])
+        
+        # Plot heuristic values, g_cost, and f_cost
+        for x in range(n_x):
+            for y in range(n_y):
+                if (x, y) in h_cost:
+                    h_value = h_cost[(x, y)]
+                    g_values = g_cost.get((x, y), set())
+                    f_values = f_cost.get((x, y), set())
+                    
+                    g_str = ','.join(map(str, sorted(g_values)))
+                    f_str = ','.join(map(str, sorted(f_values)))
+                    
+                    if len(sorted(g_values)) > 0:
+                        print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
+                        g_str = str(sorted(g_values)[0])
+                        f_str = str(sorted(f_values)[0])
+                        g_str = str(round(float(g_str),2))
+                        f_str = str(round(float(f_str),2))
+                    
+                    h_value = str(round(float(h_value),2))
+
+                    cell_text = f'h:{h_value}\ng:{g_str}\nf:{f_str}'
+                    ax.text(y, x, cell_text, ha='center', va='center', fontsize=13, 
+                            color='red' if my_map[x][y] else 'black')
+
+        # Plot obstacles
+        obstacle_mask = np.array(my_map, dtype=bool)
+        ax.imshow(obstacle_mask, cmap='binary', alpha=0.3)
+        
+        # Plot explored nodes as small red rectangles
+        for pos in explored_positions:
+            rect = plt.Rectangle((pos[1] - 0.4, pos[0] - 0.4), 0.8, 0.8, 
+                                fill=False, facecolor='green', edgecolor='green', alpha=0.3)
+            ax.add_patch(rect)
+        
+        # Plot start and goal positions
+        colors = ['g', 'r', 'b']  # Colors for each agent
+        markers = ['o', 's', '^']  # Markers for each agent
+        for i, agent in enumerate(self.agents):
+            start = self.starts[i]
+            goal = self.goals[i]
+            ax.plot(start[1], start[0], color=colors[i], marker=markers[i], markersize=10, label=f'Start {agent}')
+            ax.plot(goal[1], goal[0], color=colors[i], marker='*', markersize=12, label=f'Goal {agent}')
+        
+        # Plot current positions and path from start
+        for i, agent in enumerate(self.agents):
+            pos = curr['loc'][i]
+            ax.plot(pos[1], pos[0], color=colors[i], marker=markers[i], markersize=8, fillstyle='none')
+            
+            # Draw path from start to current position
+            path = []
+            node = curr
+            while node:
+                path.append(node['loc'][i])
+                node = node['parent']
+            path.reverse()
+            path_x = [p[1] for p in path]
+            path_y = [p[0] for p in path]
+            ax.plot(path_x, path_y, color=colors[i], linewidth=2, alpha=0.7)
+        
+        # Add yellow rectangles for the current path
+        for path_pos in path:
+            rect = plt.Rectangle((path_pos[1] - 0.4, path_pos[0] - 0.4), 0.8, 0.8, 
+                                fill=True, facecolor='green', edgecolor='green', alpha=0.2)
+            ax.add_patch(rect)
+        
+        # Plot children positions and lines to current position
+        for child in children:
+            for i, agent in enumerate(self.agents):
+                pos = child['loc'][i]
+                ax.plot(pos[1], pos[0], color=colors[i], marker='.', markersize=6, alpha=0.5)
+                ax.plot([curr['loc'][i][1], pos[1]], [curr['loc'][i][0], pos[0]], 
+                        color=colors[i], linestyle='--', linewidth=1, alpha=0.5)
+        
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.set_aspect('equal', 'box')
+        
+        # Create result directory if it doesn't exist
+        result_dir = RESULT_DIR + f'/step/'
+        os.makedirs(result_dir, exist_ok=True)
+        
+        # Save the plot for each agent
+        for agent in self.agents:
+            agent_dir = os.path.join(result_dir, f'robot_{agent+1}')
+            os.makedirs(agent_dir, exist_ok=True)
+            filename = os.path.join(agent_dir, f'step_{step_count:04d}.png')
+            plt.savefig(filename, dpi=300, bbox_inches='tight')
+        
+        plt.close(fig)

@@ -1,4 +1,4 @@
 costs:
-  straight: 3
-  rotate_left: 3
-  rotate_right: 3
+  straight: 0.6
+  rotate_left: 0.1
+  rotate_right: 0.1

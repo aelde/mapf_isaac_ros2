@@ -11,6 +11,9 @@ def load_uneven_astar_config():
         config = yaml.safe_load(file)
     return config['costs']
 
+
+RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+
 class AstarPlanner:
     def __init__(self, obstacles):
         self.obstacles = obstacles

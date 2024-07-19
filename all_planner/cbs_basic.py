@@ -7,6 +7,17 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgba
 import os
+import yaml
+
+WS_DIR = '/home/eggs/humble_mapf/src/mapf_isaac'
+
+def load_uneven_astar_config():
+    config_dir = 'config/uneven_astar.yaml'
+    config_d = os.path.join(WS_DIR, config_dir)
+    print(f'astar config dir: {config_d}')
+    with open(config_d, 'r') as file:
+        config = yaml.safe_load(file)
+    return config['costs']
 
 def each_astar_step(my_map, starts, goals, heuristics, all_paths, constraints, step):
     n_x = len(my_map)
@@ -422,8 +433,7 @@ class CBSSolver(object):
                 'collisions': []}
 
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            astar = AStar(self.my_map, self.starts, self.goals,
-                          self.heuristics, i, root['constraints'])
+            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'],load_uneven_astar_config())
             path = astar.find_paths()
             # print(f'i: {i}, path: {path[0]}')
             me_map_pos = []
