@@ -1,5 +1,6 @@
 import numpy as np
-    
+
+# isaac warehouse
 obstacles_1 = np.array([
     [-10.5, 4.5, 0], [-10.5, 7.5, 0], [-10.5, 10.5, 0], [-10.5, 13.5, 0],
     [-10.5, 16.5, 0], [-10.5, 19.5, 0], [-10.5, 22.5, 0],
@@ -38,3 +39,14 @@ obstacles_1 = np.array([
     [10.5, -28.5, 0], [13.5, -28.5, 0], [16.5, -28.5, 0], [19.5, -28.5, 0],
     [22.5, -28.5, 0], [25.5, -28.5, 0], [28.5, -28.5, 0],
 ])
+
+# pendora ob
+ob = np.array([[7.5 if j==0 and k<=1 else -7.5 if j==1 and k<=1 else 4.5 if j==0 else -4.5  ,-46.5+(i*18)+(k*3),0] for i in range(6) for j in range(2) for k in range(6)])
+ob_2 = np.array([[7.5 if (i==1 and j==0) or (i==2 and j==0) else -7.5 if (i==1 and j==1) or (i==2 and j==1) else 4.5 if j==0 else -4.5,-64.5+(i*3),0] for i in range(6) for j in range(2)])
+ob_3 = np.array([[4.5-(i*3),67.5,0] for i in range(4)])
+ob_4 = np.array([[7.5 if j==0 else -7.5,61.5+(i*3),0] for i in range(2) for j in range(2)])
+ob_5 = np.array([[1.5,-67.5,0],[-1.5,-67.5,0]])
+ob_combined = np.concatenate((ob,ob_2,ob_3,ob_4, ob_5), axis=0)
+len(ob_combined) # 94
+# pendora
+obstacles_p = ob_combined

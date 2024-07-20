@@ -528,7 +528,7 @@ class A_Star(object):
             # if (tuple(curr['loc']),curr['timestep']) not in self.closed_list:
             #     self.closed_list[(tuple(curr['loc']),curr['timestep'])] = curr
             
-            self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
+            # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
             step_count += 1
         print('no solution')
 
