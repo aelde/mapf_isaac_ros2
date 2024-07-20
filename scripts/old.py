@@ -24,14 +24,13 @@ import omni.isaac.core.utils.stage as stage_utils
 from omni.isaac.core.utils.rotations import euler_angles_to_quat ,quat_to_euler_angles
 from omni.isaac.wheeled_robots.robots import WheeledRobot
 from omni.isaac.core.articulations import Articulation
-from omni.isaac.cloner import GridCloner,Cloner
+from omni.isaac.cloner import GridCloner
 from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.extensions import enable_extension
 import time
 import omni.isaac.core.utils.prims as prim_utils
 import os
 import yaml
-
 
 # enable ROS2 bridge extension
 enable_extension("omni.isaac.ros2_bridge")
@@ -47,6 +46,8 @@ from rclpy.node import Node
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Pose2D
 from mapf_isaac.msg import TbPathtoGoal,TbTask,Tbpose2D
+import os
+import yaml
 
 def create_link_graph(a_y,a_x,b_y,b_x):
     pos_rot = {}
@@ -80,34 +81,31 @@ def load_uneven_astar_config():
         MAP_NAME = config['map']['map_name']
         robot_config = config['robot']
         TOTAL_ROBOTS = robot_config['total_robots']
-        ROBOT_START = robot_config['robot_start_p']
-        print(ROBOT_START)
+        ROBOT_START = robot_config['robot_start']
+    # print(ROBOT_START)
     return config['costs']
 
 class Subscriber(Node):
     def __init__(self):
         super().__init__("Simulation_Isaac_UI")
+
         print('ffiofififi')
         self.astar_cost = load_uneven_astar_config()
         print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}\n")
         print(f"Costs: {self.astar_cost}")
-        # ROBOT_START
-        # for robot_id, position in ROBOT_START.items():
-        #     print(f"Robot {robot_id} start position: {position}")
 
         # setting up the world with a cube
         self.timeline = omni.timeline.get_timeline_interface()
         self.ros_world = World(stage_units_in_meters=1.0)
         # self.ros_world.scene.add_default_ground_plane()
         
-        warehouse_path = "/home/eggs/obo_isaac_simulation/usd/pendora4.usd"
-        warehouse_prim_path = "/World/pendora"
+        warehouse_path = "/home/eggs/obo_isaac_simulation/usd/warehouse_nowall_nolamp.usd"
+        warehouse_prim_path = "/World/warehouse"
         stage_utils.add_reference_to_stage(usd_path=warehouse_path, prim_path=warehouse_prim_path)
-        warehouse = Articulation(prim_path=warehouse_prim_path, name="warehousee",position=np.array([-0.05407,10.37693,0.0]))
+        warehouse = Articulation(prim_path=warehouse_prim_path, name="warehousee",position=np.array([10.139,-3.53467,0.0]))
         tb_usd_path_green = "/home/eggs/obo_isaac_simulation/usd/turtlebot3green_new.usd"
         tb_usd_path_red = "/home/eggs/obo_isaac_simulation/usd/turtlebot3red.usd"
         tb_usd_path_blue = "/home/eggs/obo_isaac_simulation/usd/turtlebot3blue.usd"
-        tb_usd_path_sky = "/home/eggs/obo_isaac_simulation/usd/turtlebot4sky.usd"
         
         cylider_light_1 = prim_utils.create_prim(
             "/World/CylinderLight_1",
@@ -122,13 +120,35 @@ class Subscriber(Node):
         )
         
         #-------------------- declare param
-
-        # c = green , red , blue
-        tb_color = [[0,1,0],[1,0,0],[0,0,1],[0,1,1]]
-        tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue,tb_usd_path_sky]
-        start_pos = [j for i,j in ROBOT_START.items()]
-        # print('start_pos :',start_pos)
         
+        tb_color = [[0,1,0],[1,0,0],[0,0,1]]
+        tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue]
+        start_pos = [j for i,j in ROBOT_START.items()]
+        print(f'TOTAL_ROBOTS: {TOTAL_ROBOTS}')
+        print(f'start_pos: {start_pos}')
+        
+        # self.tb_job = [
+        #     {"id": 1, 
+        #      "name": "tb_1",
+        #      "color": np.array([0,1,0]), #green
+        #      "start_pos": np.array([-1.5,-22.5,0.0]),
+        #      "usd_path": tb_usd_path_green
+        #      }, 
+        #     {"id": 2,
+        #      "name": "tb_2",
+        #      "color": np.array([1,0,0]), #red
+        #      "start_pos" : np.array([7.5,19.5,0.0]),
+        #      "usd_path": tb_usd_path_red
+        #      }, 
+        #     {"id": 3,
+        #      "name": "tb_3",
+        #      "color": np.array([0,0,1]), #blue
+        #      "start_pos" : np.array([4.5,-16.5,0.0]),
+        #      "usd_path": tb_usd_path_blue
+        #      }, 
+        #     # {"id": 3, "name": "tb_3", "color": np.array([0,0,1])},  # Blue color for the third link
+        #     # Add more job entries as needed
+        # ]
         self.tb_job = [
             {
                 "id" : i,
@@ -138,7 +158,7 @@ class Subscriber(Node):
                 "usd_path": tb_usd_path[i-1]
             } for i in range(1,TOTAL_ROBOTS+1)
         ]
-        print(f'len_tb_job: {len(self.tb_job)}')
+
         for i in range(len(self.tb_job)):
             self.ros_world.scene.add(
                 WheeledRobot(
@@ -151,8 +171,7 @@ class Subscriber(Node):
                     orientation=np.array(euler_angles_to_quat([0,0,90],degrees=True,extrinsic=False))        
                 )
             )
-        clonerr = GridCloner(spacing=3,num_per_row=54)
-        # cloner = GridCloner(spacing=3,num_per_row=18)
+        cloner = GridCloner(spacing=3,num_per_row=18)
         sph_node_prim_path = "/World/node"
         VisualSphere(
                 prim_path=sph_node_prim_path,
@@ -162,46 +181,16 @@ class Subscriber(Node):
                 color=np.array([1,1,1]),
                 visible=True,
         )
-        target_paths_sph = clonerr.generate_paths("/World/node",88)
-        print(f't:{len(target_paths_sph)}')
+        target_paths_sph = cloner.generate_paths("/World/node",180)
+        # print(f't:{len(target_paths_sph)}')
         num_sph_nodes = len(target_paths_sph)
-        clonerr.clone(source_prim_path="/World/node", prim_paths=target_paths_sph)
-        
-        # cloner more for left node
-        cloner = Cloner()
-        target_paths = cloner.generate_paths("/World/node_", 32)
-        sph_left_pos = np.array([[4.5 if k==0 else -4.5,-61.5+(i*15 if i<2 else i*15+3*(i-1))+(j*3),0] for i in range(8) for j in range(2) for k in range(2)])
-        cloner.clone(source_prim_path="/World/node", prim_paths=target_paths, positions=sph_left_pos)
-        
-        # obstacle 
-        # target_paths_ob = cloner.generate_paths("/World/node_o_", 72)
-        # target_paths_ob2 = cloner.generate_paths("/World/node_o2_", 12)
-        # target_paths_ob3 = cloner.generate_paths("/World/node_o3_", 4)
-        # target_paths_ob4 = cloner.generate_paths("/World/node_o4_", 4)
-        # target_paths_ob5 = cloner.generate_paths("/World/node_o5_", 2)
-        target_paths_cbo = cloner.generate_paths("/World/node_cbo_", 94)
-        
-        
-        ob = np.array([[7.5 if j==0 and k<=1 else -7.5 if j==1 and k<=1 else 4.5 if j==0 else -4.5  ,-46.5+(i*18)+(k*3),0] for i in range(6) for j in range(2) for k in range(6)])
-        ob_2 = np.array([[7.5 if (i==1 and j==0) or (i==2 and j==0) else -7.5 if (i==1 and j==1) or (i==2 and j==1) else 4.5 if j==0 else -4.5,-64.5+(i*3),0] for i in range(6) for j in range(2)])
-        ob_3 = np.array([[4.5-(i*3),67.5,0] for i in range(4)])
-        ob_4 = np.array([[7.5 if j==0 else -7.5,61.5+(i*3),0] for i in range(2) for j in range(2)])
-        ob_5 = np.array([[1.5,-67.5,0],[-1.5,-67.5,0]])
-        ob_combined = np.concatenate((ob,ob_2,ob_3,ob_4, ob_5), axis=0)
-        len(ob_combined)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_ob, positions=ob)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_ob2, positions=ob_2)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_ob3, positions=ob_3)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_ob4, positions=ob_4)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_ob5, positions=ob_5)
-        # cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_cbo, positions=ob_combined)
-        
+        cloner.clone(source_prim_path="/World/node", prim_paths=target_paths_sph)
         
         sphs = XFormPrimView("/World/node_*")
         sph_nodes_positions , orien = sphs.get_world_poses()
         sph_nodes_positions[:,2] += 0.25
         sphs.set_world_poses(sph_nodes_positions, orien)
-        for i in range(len(sph_nodes_positions)): print(f'{i}: {sph_nodes_positions[i]}')
+        # for i in range(len(sph_nodes_positions)): print(f'{i}: {sph_nodes_positions[i]}')
 
         # setup the ROS2 subscriber here
         self.tb_pos = self.create_publisher(TbTask,'all_tb_pos',10)

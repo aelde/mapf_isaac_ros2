@@ -22,9 +22,11 @@ def get_sum_of_cost(paths):
     return rst
 
     
-def convert_normal_to_pos(pos):
+def convert_normal_to_pos_w(pos):
     return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
 
+def convert_normal_to_pos_p(pos):
+    return (pos[0]*3 - 7.5, pos[1]*3 - 67.5)
 
 def compute_heuristics(my_map, goal):
     # print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
@@ -383,7 +385,7 @@ class A_Star(object):
             g_value = curr['g_val'] + custom_g_cost
             '''***************"***************"***************'''
 
-            print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos(child_loc[0])}')
+            print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
 
             reached_goal = [False for i in range(len(self.agents))]
 
@@ -479,7 +481,7 @@ class A_Star(object):
             #     return
 
             curr = self.pop_node()
-            print(f'pop: {curr["loc"]}, {convert_normal_to_pos(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
+            print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
             
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
             # print(curr['reached_goal'] )

@@ -1,14 +1,22 @@
 # Map
 map: 
-  map_name: 'cbs_2'
+  map_name: 'map_pen'
+  # map_name: 'cbs_2'
 
 # Robot 
 robot:
-  total_robots: 3
-  robot_start:
+  total_robots: 4
+  robot_start_w: # for warehouse map
     1: [-1.5,-22.5,0.0]
     2: [7.5,19.5,0.0]
     3: [4.5,-16.5,0.0]
+    4: [4.5,-19.5,0.0]
+  robot_start_p: # for pendora
+    1: [1.5,-64.5,0.0]
+    2: [-1.5,-64.5,0.0]
+    3: [4.5,-61.5,0.0]
+    4: [4.5,-58.5 ,0.0]
+
 
 # A-star config 
 costs:

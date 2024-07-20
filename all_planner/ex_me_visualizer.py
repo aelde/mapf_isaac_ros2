@@ -25,7 +25,7 @@ RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
 
 class Visualizer:
     def __init__(self):
-        self.obstacles = obstacles_1
+        self.obstacles = obstacles_p
 
     def visualize_astar_path(self, tb_id, start_pos, goal_pos, current, open_set, closed_set, g_score, f_score, came_from, step):
         fig, ax = plt.subplots(figsize=(16, 12))
@@ -101,10 +101,14 @@ class Visualizer:
         goal_pos = np.array(goal_pos)
         path = np.array(path)
         
-        ax.set_xlim(-28.5, 28.5)
-        ax.set_ylim(-16.5, 16.5)
-        ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        # ax.set_xlim(-28.5, 28.5)
+        # ax.set_ylim(-16.5, 16.5)
+        # ax.set_xticks(np.arange(-25.5, 26.5, 3))
+        # ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        ax.set_xlim(-67.5, 67.5)
+        ax.set_ylim(-7.5, 7.5)
+        ax.set_xticks(np.arange(-64.5, 64.5, 3))
+        ax.set_yticks(np.arange(-7.5, 7.5, 3))
         ax.grid(True)
 
         obstacles = obstacles[:, :2]
@@ -139,16 +143,20 @@ class Visualizer:
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title('Path Planning for All TBs')
         
-        ax.set_xlim(-28.5, 28.5)
-        ax.set_ylim(-16.5, 16.5)
-        ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        # ax.set_xlim(-28.5, 28.5)
+        # ax.set_ylim(-16.5, 16.5)
+        # ax.set_xticks(np.arange(-25.5, 26.5, 3))
+        # ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        ax.set_xlim(-67.5, 67.5)
+        ax.set_ylim(-7.5, 7.5)
+        ax.set_xticks(np.arange(-64.5, 64.5, 3))
+        ax.set_yticks(np.arange(-7.5, 7.5, 3))
         ax.grid(True)
 
         obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
-        colors = ['g', 'r', 'b']
+        colors = ['g', 'r', 'b','c']
         
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
             # print(f'tb number: {i+1} :: color: {colors[i]} :: start: {start}')
@@ -194,8 +202,8 @@ class Visualizer:
         obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
-        colors = ['g', 'r', 'b']
-        offsets = [-0.2, 0, 0.2]  # offsets for each path
+        colors = ['g', 'r', 'b','c']
+        offsets = [-0.2, 0, 0.2, 0.4]  # offsets for each path
         
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
             path = np.array(path)

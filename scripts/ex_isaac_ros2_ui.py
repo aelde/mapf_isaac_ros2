@@ -67,7 +67,7 @@ def create_link_graph(a_y,a_x,b_y,b_x):
 MAP_NAME = None
 TOTAL_ROBOTS = None
 ROBOT_START = None
-WS_DIR = f'{os.getcwd()}'
+WS_DIR = f'{os.getcwd()}/src/mapf_isaac/'
 print(WS_DIR)
 
 def load_uneven_astar_config():
@@ -80,7 +80,7 @@ def load_uneven_astar_config():
         MAP_NAME = config['map']['map_name']
         robot_config = config['robot']
         TOTAL_ROBOTS = robot_config['total_robots']
-        ROBOT_START = robot_config['robot_start']
+        ROBOT_START = robot_config['robot_start_w']
     # print(ROBOT_START)
     return config['costs']
 
@@ -91,7 +91,7 @@ class Subscriber(Node):
         self.astar_cost = load_uneven_astar_config()
         print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}\n")
         print(f"Costs: {self.astar_cost}")
-        ROBOT_START
+        # ROBOT_START
         # for robot_id, position in ROBOT_START.items():
         #     print(f"Robot {robot_id} start position: {position}")
 
@@ -132,7 +132,7 @@ class Subscriber(Node):
             {
                 "id" : i,
                 "name": f'tb_{i}',
-                "color": tb_color[i-1],
+                "color": np.array(tb_color[i-1]),
                 "start_pos": np.array(start_pos[i-1]),
                 "usd_path": tb_usd_path[i-1]
             } for i in range(1,TOTAL_ROBOTS+1)

@@ -10,7 +10,7 @@ import yaml
 from datetime import datetime
 import time
 import sys
-from map._map import obstacles_1
+from map._map import obstacles_1,obstacles_p
 import glob
 from dotenv import load_dotenv
 from all_planner.ex_planner_control import PlannerControl
@@ -37,8 +37,14 @@ def load_uneven_astar_config():
 def convert_normal_to_pos(pos):
     return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
 
+def convert_normal_to_pos_p(pos):
+    return (pos[0]*3 - 7.5, pos[1]*3 - 67.5)
+
 def convert_pos_to_normal(normal):
     return (int((normal[0] + 16.5) / 3), int((normal[1] + 28.5) / 3))
+
+def convert_pos_to_normal_p(normal):
+    return (int((normal[0] + 7.5) / 3), int((normal[1] + 67.5) / 3))
 
 def import_mapf_instance(filename):
     f = open(filename, 'r')
@@ -75,9 +81,9 @@ class RosPathPlanner(Node):
         self.tb_queue_job_task = []
         self.tb_pos = [
             {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": None}
-            for i in range(1, 4)
+            for i in range(1, TOTAL_ROBOTS+1)
         ]
-        self.is_start = [True for i in range(3)]
+        self.is_start = [True for i in range(TOTAL_ROBOTS)]
         self.path_think_step = [
             {"id": 1, "tstep": 0},
             {"id": 2, "tstep": 0},
@@ -155,8 +161,8 @@ class RosPathPlanner(Node):
         print(f'************************************')
         starts = [(self.tb_pos[i]["start_pos"][:2]) for i in range(len(self.tb_pos))]
         goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
-        normal_start = [convert_pos_to_normal(starts[i]) for i in range(len(starts))]
-        normal_goals = [convert_pos_to_normal(goals[i]) for i in range(len(goals))]
+        normal_start = [convert_pos_to_normal_p(starts[i]) for i in range(len(starts))]
+        normal_goals = [convert_pos_to_normal_p(goals[i]) for i in range(len(goals))]
         print(f'self.tb_pos len: {len(self.tb_pos)}')
         print(f'Starts: \n{starts}')
         print(f'Gaols: \n{goals}')
@@ -167,7 +173,7 @@ class RosPathPlanner(Node):
         solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
         paths, nodes_gen, nodes_exp = solution[:3]
         all_paths = paths # 0 - n
-        all_paths_conv = [np.array([convert_normal_to_pos(point) for point in path]) for path in paths] 
+        all_paths_conv = [np.array([convert_normal_to_pos_p(point) for point in path]) for path in paths] 
         print(f'All paths: ')
         for i in all_paths[0]: print(i)
         # print(all_paths)
@@ -179,10 +185,10 @@ class RosPathPlanner(Node):
         
         # visualize each path
         for i, path in enumerate(all_paths_conv):
-            Visualizer.visualize_path(obstacles_1, i+1, starts[i], goals[i], path)
+            Visualizer.visualize_path(obstacles_p, i+1, starts[i], goals[i], path)
         # visualize all paths
-        Visualizer.visualize_all_paths(obstacles_1, all_paths_conv, starts, goals)
-        Visualizer.visualize_all_paths_2(obstacles_1, all_paths_conv, starts, goals)
+        Visualizer.visualize_all_paths(obstacles_p, all_paths_conv, starts, goals)
+        Visualizer.visualize_all_paths_2(obstacles_p, all_paths_conv, starts, goals)
         
         # visualize animate
         PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)

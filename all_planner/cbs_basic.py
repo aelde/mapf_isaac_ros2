@@ -173,7 +173,7 @@ def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
     fig, axs = plt.subplots(1, num_agents, figsize=(6*num_agents, 6), squeeze=False)
     fig.suptitle('Map Visualization with Start, Goal Positions, and Heuristics', fontsize=16)
     
-    colors = ['lime', 'deeppink', 'blue']
+    colors = ['lime', 'deeppink', 'blue','cyan']
     
     for i in range(num_agents):
         ax = axs[0, i]
@@ -437,7 +437,7 @@ class CBSSolver(object):
             path = astar.find_paths()
             # print(f'i: {i}, path: {path[0]}')
             me_map_pos = []
-            for i in path[0]: me_map_pos.append(convert_normal_to_pos(i))
+            for i in path[0]: me_map_pos.append(convert_normal_to_pos_p(i))
             print(me_map_pos)
             if path is None:
                 raise BaseException('No solutions')
@@ -478,6 +478,7 @@ class CBSSolver(object):
                     'agent_0': [],
                     'agent_1': [],
                     'agent_2': [],
+                    'agent_3': [],
                 }
                 self.print_results(p)
                 # print(len(p["paths"]))
@@ -485,7 +486,7 @@ class CBSSolver(object):
                 for pa in range(len(p["paths"])):
                     # print(pa)
                     for i in p["paths"][pa]:
-                        mypos[f"agent_{pa}"].append(convert_normal_to_pos(i))
+                        mypos[f"agent_{pa}"].append(convert_normal_to_pos_p(i))
                         # print(pa)
                 for i in mypos:
                     print(i, mypos[i])
@@ -524,7 +525,7 @@ class CBSSolver(object):
 
                 ai = constraint['agent']
                 astar = AStar(self.my_map, self.starts, self.goals,
-                              self.heuristics, ai, q['constraints'])
+                              self.heuristics, ai, q['constraints'],load_uneven_astar_config())
                 path = astar.find_paths()
 
                 if path is not None:
@@ -542,7 +543,7 @@ class CBSSolver(object):
                         vol = paths_violate_constraint(constraint, q['paths'])
                         for v in vol:
                             astar_v = AStar(
-                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'])
+                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'],load_uneven_astar_config())
                             path_v = astar_v.find_paths()
                             if path_v is None:
                                 continue_flag = True
@@ -567,8 +568,11 @@ class CBSSolver(object):
         print("Solution:")
         for i in range(len(node['paths'])):
             for j in range(i):
-                my_pos.append(convert_normal_to_pos(node['paths'][i][0]))
+                my_pos.append(convert_normal_to_pos_p(node['paths'][i][0]))
             print("agent", i, ": ", node['paths'][i])
 
 def convert_normal_to_pos(pos):
     return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
+
+def convert_normal_to_pos_p(pos):
+    return (pos[0]*3 - 7.5, pos[1]*3 - 67.5)
