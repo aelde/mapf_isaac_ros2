@@ -10,41 +10,13 @@ import yaml
 from datetime import datetime
 import time
 import sys
-from map._map import obstacles_1,obstacles_p
 import glob
 from dotenv import load_dotenv
 from all_planner.ex_planner_control import PlannerControl
 from all_planner.ex_me_visualizer import Visualizer
+from all_planner.DICISION import CONV_NORMAL_TO_POS,CONV_POS_TO_NORMAL,WS_DIR,MAP_NAME,TOTAL_ROBOTS,OBSTACLES_MAP
+
 load_dotenv()
-
-MAP_NAME = None
-TOTAL_ROBOTS = None
-WS_DIR = f'{os.getcwd()}/src/mapf_isaac/'
-print(WS_DIR)
-
-def load_uneven_astar_config():
-    config_dir = 'config/uneven_astar.yaml'
-    config_d = os.path.join(f'{WS_DIR}', config_dir)
-    print(f'astar config dir: {config_d}')
-    with open(config_d, 'r') as file:
-        config = yaml.safe_load(file)
-        global MAP_NAME,TOTAL_ROBOTS,ROBOT_START
-        MAP_NAME = config['map']['map_name']
-        TOTAL_ROBOTS = config['robot']['total_robots']
-
-    return config['costs']
-
-def convert_normal_to_pos(pos):
-    return (pos[0]*3 - 16.5, pos[1]*3 - 28.5)
-
-def convert_normal_to_pos_p(pos):
-    return (pos[0]*3 - 7.5, pos[1]*3 - 67.5)
-
-def convert_pos_to_normal(normal):
-    return (int((normal[0] + 16.5) / 3), int((normal[1] + 28.5) / 3))
-
-def convert_pos_to_normal_p(normal):
-    return (int((normal[0] + 7.5) / 3), int((normal[1] + 67.5) / 3))
 
 def import_mapf_instance(filename):
     f = open(filename, 'r')
@@ -60,7 +32,7 @@ def glob_map_files():
     config_d = os.path.join(WS_DIR, config_dir)
     map_files = glob.glob(config_d)
     if map_files:
-        print(f'Map files found: {map_files}')
+        # print(f'Map files found: {map_files}')
         return import_mapf_instance(map_files[0])  # Use the first file found
     else:
         print("No map files found!")
@@ -69,10 +41,6 @@ def glob_map_files():
 class RosPathPlanner(Node):
     def __init__(self):
         super().__init__('Astar_Path_Planner')
-        self.astar_cost = load_uneven_astar_config()
-        print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}")
-        print(f"Costs: {self.astar_cost}")
-
         
         self.sub_task = self.create_subscription(TbTask, 'all_tb_job_task', self.sub_tb_job_callback, 10)
         self.pub_path_goal = self.create_publisher(TbPathtoGoal, 'TbPathtoGoal_top', 10)
@@ -131,15 +99,16 @@ class RosPathPlanner(Node):
             open_start = [i["start_pos"] for i in self.tb_pos]
             print(f'open_start: \n{open_start}')
             for i in range(len(self.tb_queue_job_task)): # calculate norm from tb_queue_job_task[0] - tb_queue_job_task[n]
+                print([round(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]),2) for j in range(len(open_start))])
                 minn_norm = round(min(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]) for j in range(len(open_start))),2)
-                print(f'tb_queue_{i}: {self.tb_queue_job_task[i][1][:2]}')
+                print(f'tb_queue_{i}: {self.tb_queue_job_task[i][1][:2]} , {CONV_POS_TO_NORMAL(self.tb_queue_job_task[i][1][:2])}')
                 print(f'minn_norm: {minn_norm}')
                 # minnn = min(self.tb_pos, key=lambda x: np.linalg.norm(self.tb_queue_job_task[i][1][:2] - np.array(x['start_pos'][:2])))
                 # print(f'minnn: \n{minnn}')
                 for j in self.tb_pos:
                     if minn_norm == round(np.linalg.norm(self.tb_queue_job_task[i][1][:2] - j["start_pos"][:2]), 2):
                         j["goal_pos"] = self.tb_queue_job_task[i][1] 
-                        print(f'j: {j["start_pos"]}')
+                        print(f'j: {j["start_pos"]} , {CONV_POS_TO_NORMAL(j["start_pos"])}')
                         open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
                         print(f'open_start_{i}: {open_start}')
             
@@ -161,8 +130,10 @@ class RosPathPlanner(Node):
         print(f'************************************')
         starts = [(self.tb_pos[i]["start_pos"][:2]) for i in range(len(self.tb_pos))]
         goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
-        normal_start = [convert_pos_to_normal_p(starts[i]) for i in range(len(starts))]
-        normal_goals = [convert_pos_to_normal_p(goals[i]) for i in range(len(goals))]
+        # normal_start = [convert_pos_to_normal_p(starts[i]) for i in range(len(starts))]
+        normal_start = [CONV_POS_TO_NORMAL(starts[i]) for i in range(len(starts))]
+        
+        normal_goals = [CONV_POS_TO_NORMAL(goals[i]) for i in range(len(goals))]
         print(f'self.tb_pos len: {len(self.tb_pos)}')
         print(f'Starts: \n{starts}')
         print(f'Gaols: \n{goals}')
@@ -173,7 +144,7 @@ class RosPathPlanner(Node):
         solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
         paths, nodes_gen, nodes_exp = solution[:3]
         all_paths = paths # 0 - n
-        all_paths_conv = [np.array([convert_normal_to_pos_p(point) for point in path]) for path in paths] 
+        all_paths_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in paths] 
         print(f'All paths: ')
         for i in all_paths[0]: print(i)
         # print(all_paths)
@@ -185,10 +156,10 @@ class RosPathPlanner(Node):
         
         # visualize each path
         for i, path in enumerate(all_paths_conv):
-            Visualizer.visualize_path(obstacles_p, i+1, starts[i], goals[i], path)
+            Visualizer.visualize_path(OBSTACLES_MAP, i+1, starts[i], goals[i], path,MAP_NAME)
         # visualize all paths
-        Visualizer.visualize_all_paths(obstacles_p, all_paths_conv, starts, goals)
-        Visualizer.visualize_all_paths_2(obstacles_p, all_paths_conv, starts, goals)
+        Visualizer.visualize_all_paths(OBSTACLES_MAP, all_paths_conv, starts, goals,MAP_NAME)
+        Visualizer.visualize_all_paths_2(OBSTACLES_MAP, all_paths_conv, starts, goals,MAP_NAME)
         
         # visualize animate
         PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)

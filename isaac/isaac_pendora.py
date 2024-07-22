@@ -29,9 +29,6 @@ from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.extensions import enable_extension
 import time
 import omni.isaac.core.utils.prims as prim_utils
-import os
-import yaml
-
 
 # enable ROS2 bridge extension
 enable_extension("omni.isaac.ros2_bridge")
@@ -47,6 +44,7 @@ from rclpy.node import Node
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Pose2D
 from mapf_isaac.msg import TbPathtoGoal,TbTask,Tbpose2D
+from all_planner.DICISION import ROBOT_START,TOTAL_ROBOTS
 
 def create_link_graph(a_y,a_x,b_y,b_x):
     pos_rot = {}
@@ -64,37 +62,9 @@ def create_link_graph(a_y,a_x,b_y,b_x):
     }
     return pos_rot
          
-MAP_NAME = None
-TOTAL_ROBOTS = None
-ROBOT_START = None
-WS_DIR = f'{os.getcwd()}/src/mapf_isaac/'
-print(WS_DIR)
-
-def load_uneven_astar_config():
-    config_dir = 'config/uneven_astar.yaml'
-    config_d = os.path.join(f'{WS_DIR}', config_dir)
-    # print(f'astar config dir: {config_d}')
-    with open(config_d, 'r') as file:
-        config = yaml.safe_load(file)
-        global MAP_NAME,TOTAL_ROBOTS,ROBOT_START
-        MAP_NAME = config['map']['map_name']
-        robot_config = config['robot']
-        TOTAL_ROBOTS = robot_config['total_robots']
-        ROBOT_START = robot_config['robot_start_p']
-        print(ROBOT_START)
-    return config['costs']
-
 class Subscriber(Node):
     def __init__(self):
         super().__init__("Simulation_Isaac_UI")
-        print('ffiofififi')
-        self.astar_cost = load_uneven_astar_config()
-        print(f"WS_DIR: {WS_DIR}\nMAP_NAME: {MAP_NAME}\nTOTAL_ROBOTS: {TOTAL_ROBOTS}\n")
-        print(f"Costs: {self.astar_cost}")
-        # ROBOT_START
-        # for robot_id, position in ROBOT_START.items():
-        #     print(f"Robot {robot_id} start position: {position}")
-
         # setting up the world with a cube
         self.timeline = omni.timeline.get_timeline_interface()
         self.ros_world = World(stage_units_in_meters=1.0)
@@ -228,6 +198,31 @@ class Subscriber(Node):
         self.pose2d.publish(self.tb_pose)
         print(f'pose2d : {self.tb_pose}')
     
+    # def tb_path_receive(self, msg):
+    #     tb_id = msg.tb_id
+    #     data = msg.listofpath.data
+    #     dim0_size = msg.listofpath.layout.dim[0].size
+    #     dim1_size = msg.listofpath.layout.dim[1].size
+    #     re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
+    #     print(f'len_tb_path: {len(re_tb_path)}')
+    #     print(f'tb_path: {re_tb_path}')
+    #     a = [i for i in range(1,len(re_tb_path))]
+    #     b = [i for i in range(0,len(re_tb_path)-1)]
+    #     for i in range(len(re_tb_path)-1):
+    #         print(f'a_y: {re_tb_path[i+1][1]}, a_x: {re_tb_path[i+1][0]}, b_y: {re_tb_path[i][1]}, b_x: {re_tb_path[i][0]}')
+    #         pos_rot = create_link_graph(re_tb_path[i+1][1], re_tb_path[i+1][0], re_tb_path[i][1], re_tb_path[i][0])
+    #         print(f'pos_rot: {pos_rot}')
+    #         self.ros_world.scene.add(
+    #             VisualCylinder(
+    #                 position=pos_rot["pos"],
+    #                 prim_path=f'/World/Link_{tb_id}_{i+1}',
+    #                 name=f'link_{tb_id}_{i+1}',
+    #                 orientation=pos_rot["rot"],
+    #                 scale=np.array([0.1,0.1,3.0]),
+    #                 color=self.tb_job[tb_id-1]["color"]
+    #             )
+    #         )
+        
     def tb_path_receive(self, msg):
         tb_id = msg.tb_id
         data = msg.listofpath.data
@@ -236,23 +231,30 @@ class Subscriber(Node):
         re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
         print(f'len_tb_path: {len(re_tb_path)}')
         print(f'tb_path: {re_tb_path}')
-        a = [i for i in range(1,len(re_tb_path))]
-        b = [i for i in range(0,len(re_tb_path)-1)]
-        for i in range(len(re_tb_path)-1):
-            print(f'a_y: {re_tb_path[i+1][1]}, a_x: {re_tb_path[i+1][0]}, b_y: {re_tb_path[i][1]}, b_x: {re_tb_path[i][0]}')
-            pos_rot = create_link_graph(re_tb_path[i+1][1], re_tb_path[i+1][0], re_tb_path[i][1], re_tb_path[i][0])
-            print(f'pos_rot: {pos_rot}')
-            self.ros_world.scene.add(
-                VisualCylinder(
-                    position=pos_rot["pos"],
-                    prim_path=f'/World/Link_{tb_id}_{i+1}',
-                    name=f'link_{tb_id}_{i+1}',
-                    orientation=pos_rot["rot"],
-                    scale=np.array([0.1,0.1,3.0]),
-                    color=self.tb_job[tb_id-1]["color"]
+
+        for i in range(len(re_tb_path) - 1):
+            current_point = re_tb_path[i]
+            next_point = re_tb_path[i + 1]
+            
+            print(f'a_y: {next_point[1]}, a_x: {next_point[0]}, b_y: {current_point[1]}, b_x: {current_point[0]}')
+            
+            # Check if the current point and next point are different
+            if not (next_point[1] == current_point[1] and next_point[0] == current_point[0]):
+                pos_rot = create_link_graph(next_point[1], next_point[0], current_point[1], current_point[0])
+                print(f'pos_rot: {pos_rot}')
+                
+                self.ros_world.scene.add(
+                    VisualCylinder(
+                        position=pos_rot["pos"],
+                        prim_path=f'/World/Link_{tb_id}_{i+1}',
+                        name=f'link_{tb_id}_{i+1}',
+                        orientation=pos_rot["rot"],
+                        scale=np.array([0.1, 0.1, 3.0]),
+                        color=self.tb_job[tb_id-1]["color"]
+                    )
                 )
-            )
-        
+            else:
+                print(f"Skipping VisualCylinder for identical consecutive points at index {i}")
     def run_simulation(self):
         self.timeline.play()
         reset_needed = False

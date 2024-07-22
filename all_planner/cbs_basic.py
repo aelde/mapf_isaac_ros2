@@ -7,17 +7,7 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgba
 import os
-import yaml
-
-WS_DIR = '/home/eggs/humble_mapf/src/mapf_isaac'
-
-def load_uneven_astar_config():
-    config_dir = 'config/uneven_astar.yaml'
-    config_d = os.path.join(WS_DIR, config_dir)
-    print(f'astar config dir: {config_d}')
-    with open(config_d, 'r') as file:
-        config = yaml.safe_load(file)
-    return config['costs']
+from all_planner.DICISION import DIR_COST
 
 def each_astar_step(my_map, starts, goals, heuristics, all_paths, constraints, step):
     n_x = len(my_map)
@@ -433,7 +423,7 @@ class CBSSolver(object):
                 'collisions': []}
 
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'],load_uneven_astar_config())
+            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'])
             path = astar.find_paths()
             # print(f'i: {i}, path: {path[0]}')
             me_map_pos = []
@@ -525,7 +515,7 @@ class CBSSolver(object):
 
                 ai = constraint['agent']
                 astar = AStar(self.my_map, self.starts, self.goals,
-                              self.heuristics, ai, q['constraints'],load_uneven_astar_config())
+                              self.heuristics, ai, q['constraints'])
                 path = astar.find_paths()
 
                 if path is not None:
@@ -543,7 +533,7 @@ class CBSSolver(object):
                         vol = paths_violate_constraint(constraint, q['paths'])
                         for v in vol:
                             astar_v = AStar(
-                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'],load_uneven_astar_config())
+                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'])
                             path_v = astar_v.find_paths()
                             if path_v is None:
                                 continue_flag = True

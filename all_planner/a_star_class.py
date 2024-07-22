@@ -5,8 +5,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import os
-
-RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result'
+from all_planner.DICISION import RESULT_DIR,DIR_COST
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
@@ -112,7 +111,7 @@ def get_path(goal_node,meta_agent):
 
 class A_Star(object):
 
-    def __init__(self,my_map,starts,goals,heuristics,agents,contraints,g_cost):
+    def __init__(self,my_map,starts,goals,heuristics,agents,contraints,g_cost=DIR_COST):
         """my_map   - list of lists specifying obstacle positions
         starts      - [(x1, y1), (x2, y2), ...] list of start locations for CBS
         goals       - [(x1, y1), (x2, y2), ...] list of goal locations for CBS

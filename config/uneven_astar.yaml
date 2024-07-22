@@ -1,7 +1,7 @@
 # Map
 map: 
   map_name: 'map_pen'
-  # map_name: 'cbs_2'
+  # map_name: 'map_wareh'
 
 # Robot 
 robot:
@@ -20,6 +20,9 @@ robot:
 
 # A-star config 
 costs:
-  straight: 0.6
-  rotate_left: 0.1
-  rotate_right: 0.1
+  # straight: 0.6
+  # rotate_left: 0.1
+  # rotate_right: 0.1
+  straight: 1
+  rotate_left: 1
+  rotate_right: 1

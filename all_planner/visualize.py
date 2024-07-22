@@ -6,7 +6,6 @@ from matplotlib import animation
 
 Colors = ['green', 'red', 'blue','cyan']
 
-
 class Animation:
     def __init__(self, my_map, starts, goals, paths):
         self.my_map = np.flip(np.transpose(my_map), 1)
@@ -56,11 +55,12 @@ class Animation:
             self.patches.append(Rectangle((goal[0] - 0.25, goal[1] - 0.25), 0.5, 0.5, facecolor=Colors[i % len(Colors)],
                                           edgecolor='black', alpha=0.5))
         for i in range(len(self.paths)):
-            name = str(i)
+            name = str(i+1)
             self.agents[i] = Circle((starts[i][0], starts[i][1]), 0.3, facecolor=Colors[i % len(Colors)],
                                     edgecolor='black')
             self.agents[i].original_face_color = Colors[i % len(Colors)]
             self.patches.append(self.agents[i])
+            # self.T = max(self.T+1, len(paths[i]))
             self.T = max(self.T, len(paths[i]) - 1)
             self.agent_names[i] = self.ax.text(starts[i][0], starts[i][1] + 0.25, name)
             self.agent_names[i].set_horizontalalignment('center')

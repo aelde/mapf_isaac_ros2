@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import MultiArrayDimension, Float32MultiArray
@@ -9,25 +8,29 @@ import numpy as np
 import time
 from datetime import datetime
 import os
-from all_planner.DICISION import WS_DIR,TOTAL_ROBOTS
+from all_planner.DICISION import WS_DIR, TOTAL_ROBOTS
 
 class PathFollowing(Node):
     def __init__(self):
         super().__init__('multi_robot_cmd_vel_publisher')
         
-        # self.robots = [f'robot{i+1}' for i in range(TOTAL_ROBOTS)]
         self.robots = ['robot1', 'robot2', 'robot3']
+        self.robots = [f'robot{i}'for i in range(1,TOTAL_ROBOTS+1)]
         self.robot_pose2d = {robot: [0, 0, 0] for robot in self.robots}
         self.robot_path = {robot: None for robot in self.robots}
         self.robot_goals_reached = {robot: False for robot in self.robots}
         self.robot_cur_goal = {robot: None for robot in self.robots}
         self.robot_time = {robot: {'start': None, 'end': None, 'duration': None} for robot in self.robots}
         self.robot_movements = {robot: {'straight': 0, 'rotate': 0} for robot in self.robots}
-        # self.reached_goal_timestep = [{**{robot: False for robot in self.robots}, 'timestep': j} for j in range(max(len(i) for i in self.robot_path))]
-        # self.robot_timestep = None
+        
+        # New variables for timestep synchronization
+        self.current_timestep = 0
+        self.max_timesteps = 0
+        self.robot_timesteps = {robot: [] for robot in self.robots}
+        self.robot_current_timestep_index = {robot: 0 for robot in self.robots}
+        self.all_robots_reached_current_timestep = False
         
         self.all_robots_completed = False
-        
         self.all_robots_exec_time = []
         
         # Subscriptions
@@ -41,46 +44,50 @@ class PathFollowing(Node):
         self.pub = {robot: self.create_publisher(Twist, f'/{robot}/cmd_vel', 10) for robot in self.robots}
         
         # Timer to publish cmd_vel periodically
-        # self.timer = self.create_timer(0.1, self.publish_cmd_vel)  # 10 Hz update rate
+        self.timer = self.create_timer(0.1, self.publish_cmd_vel)  # 10 Hz update rate
 
     def tb_odom_cb(self, msg):
-        pass  
+        pass
 
     def sub_tb2d_pos(self, msg):
         robot_id = f'robot{msg.tb_id}'
         self.robot_pose2d[robot_id] = [msg.tb_pos.x, msg.tb_pos.y, msg.tb_pos.theta]
     
     def publish_cmd_vel(self):
+        if not all(self.robot_path.values()):
+            return  # Wait until all robots have received their paths
+
         all_completed = True
         all_reached_current_timestep = True
-        
+
         for robot in self.robots:
-            if self.robot_path[robot] is not None :
+            if self.robot_current_timestep_index[robot] < len(self.robot_timesteps[robot]):
                 all_completed = False
-                if self.robot_goals_reached[robot] :
+                current_goal = self.robot_timesteps[robot][self.robot_current_timestep_index[robot]]
+                
+                if not np.array_equal(self.robot_cur_goal[robot], current_goal):
+                    self.robot_cur_goal[robot] = np.array(current_goal)
                     self.robot_goals_reached[robot] = False
-                    # self.robot_goals_reached = {i: False for i in self.robot_goals_reached}
-                    self.robot_path[robot].pop(0)
-                    # for i,j in self.robot_path.items(): self.robot_path[i] = j.pop(0)
 
-                if len(self.robot_path[robot]) == 0:
-                    self.robot_path[robot] = None
-                    self.robot_time[robot]['end'] = time.time()
-                    self.robot_time[robot]['duration'] = self.robot_time[robot]['end'] - self.robot_time[robot]['start']
-                    # self.log_robot_time(robot)
-                    continue
+                if not self.robot_goals_reached[robot]:
+                    all_reached_current_timestep = False
+                    cmd_vel = self.calculate_cmd_vel(robot)
+                    self.pub[robot].publish(cmd_vel)
+                else:
+                    self.pub[robot].publish(Twist())  # Stop the robot
 
-                self.robot_cur_goal[robot] = np.array(self.robot_path[robot][0][:2])
-
-            cmd_vel = self.calculate_cmd_vel(robot)
-            self.pub[robot].publish(cmd_vel)
+        if all_reached_current_timestep and not all_completed:
+            self.current_timestep += 1
+            for robot in self.robots:
+                if self.robot_current_timestep_index[robot] < len(self.robot_timesteps[robot]):
+                    self.robot_current_timestep_index[robot] += 1
+                    self.robot_goals_reached[robot] = False
 
         if all_completed and not self.all_robots_completed:
-            if all(robot['duration'] is not None for robot in self.robot_time.values()):
-                self.all_robots_completed = True
-                self.log_total_time()
+            self.all_robots_completed = True
+            self.log_total_time()
 
-    def calculate_cmd_vel(self, robot , timestep):
+    def calculate_cmd_vel(self, robot):
         if self.robot_cur_goal[robot] is None:
             return Twist()
         
@@ -90,7 +97,6 @@ class PathFollowing(Node):
         # Check if we've reached the goal
         if np.linalg.norm(curr_p - goal_p) < 0.1:  # 10cm threshold
             self.robot_goals_reached[robot] = True
-            self.reached_goal_timestep[timestep][robot] = True
             return Twist()
 
         # Calculate angle to goal
@@ -102,7 +108,6 @@ class PathFollowing(Node):
         cmd_vel = Twist()
         
         # Proportional control for angular velocity
-        # Kp_angular = 0.5  # Tune this parameter
         Kp_angular = 1.5  # Tune this parameter
         cmd_vel.angular.z = Kp_angular * angle_diff
         
@@ -120,7 +125,24 @@ class PathFollowing(Node):
             max_linear_vel = 0.2  # Adjust as needed
             cmd_vel.linear.x = min(cmd_vel.linear.x, max_linear_vel)
         
+        # Check proximity to other robots and adjust speed
+        closest_distance = self.get_closest_robot_distance(robot)
+        if closest_distance < 2:  # 10 cm threshold
+            slowdown_factor = closest_distance * 0.1  # Linear slowdown
+            cmd_vel.linear.x *= slowdown_factor
+            cmd_vel.angular.z *= slowdown_factor
+        
         return cmd_vel
+
+    def get_closest_robot_distance(self, robot):
+        curr_pos = np.array(self.robot_pose2d[robot][:2])
+        distances = []
+        for other_robot, pose in self.robot_pose2d.items():
+            if other_robot != robot:
+                other_pos = np.array(pose[:2])
+                distance = np.linalg.norm(curr_pos - other_pos)
+                distances.append(distance)
+        return min(distances) if distances else float('inf')
 
     def normalize_angle(self, angle):
         while angle > np.pi:
@@ -130,7 +152,6 @@ class PathFollowing(Node):
         return angle
     
     def tb_path_receive(self, msg):
-        # print(f"Received path for robot {msg.tb_id}")
         tb_id = msg.tb_id
         data = msg.listofpath.data
         dim0_size = msg.listofpath.layout.dim[0].size
@@ -139,10 +160,9 @@ class PathFollowing(Node):
         robot_id = f'robot{tb_id}'
         self.robot_path[robot_id] = re_tb_path
         
-        # self.reached_goal_at_timestep = 
-        
-        # print(f"Robot {robot_id} path: {re_tb_path}")
-        # print()
+        # Convert path to timesteps
+        self.robot_timesteps[robot_id] = self.path_to_timesteps(re_tb_path)
+        self.max_timesteps = max(self.max_timesteps, len(self.robot_timesteps[robot_id]))
         
         # Reset movement counters
         self.robot_movements[robot_id]['straight'] = 0
@@ -166,13 +186,18 @@ class PathFollowing(Node):
                 if prev_direction != curr_direction:
                     self.robot_movements[robot_id]['rotate'] += 1
         
-        
         # Set start time when path is received
         if self.robot_time[robot_id]['start'] is None:
             self.robot_time[robot_id]['start'] = time.time()
         
         print(f"Robot {robot_id} movements - Straight: {self.robot_movements[robot_id]['straight']}, "
             f"Rotate: {self.robot_movements[robot_id]['rotate']}")
+
+    def path_to_timesteps(self, path):
+        timesteps = []
+        for point in path:
+            timesteps.append(point[:2])  # Only take x and y coordinates
+        return timesteps
 
     def log_robot_time(self, robot):
         os.makedirs(f'{WS_DIR}/result', exist_ok=True)
@@ -194,9 +219,15 @@ class PathFollowing(Node):
         return total_straight, total_rotate
 
     def log_total_time(self):
+        for robot in self.robots:
+            if self.robot_time[robot]['end'] is None:
+                self.robot_time[robot]['end'] = time.time()
+                self.robot_time[robot]['duration'] = self.robot_time[robot]['end'] - self.robot_time[robot]['start']
+
         completed_durations = [robot['duration'] for robot in self.robot_time.values() if robot['duration'] is not None]
-        durtation_sum = sum([robot['duration'] for robot in self.robot_time.values() if robot['duration'] is not None])
-        print(f"sum_durations: {durtation_sum}")
+        duration_sum = sum(completed_durations)
+        print(f"sum_durations: {duration_sum}")
+
         if not completed_durations:
             print("No robots have completed their paths yet.")
             return
@@ -204,20 +235,18 @@ class PathFollowing(Node):
         total_time = max(completed_durations)
         total_straight, total_rotate = self.calculate_total_movements()
         
-        # Ensure the directory exists
         os.makedirs(f'{WS_DIR}/result', exist_ok=True)
         with open(f'{WS_DIR}/result/pathfollowing.txt', 'a') as f:
             f.write(f"{'#'*50}\n")
             f.write(f"OVERALL MISSION SUMMARY\n")
             f.write(f"{'#'*50}\n")
             f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            # f.write(f"Total execution time: {total_time:.4f} seconds\n")
-            f.write(f'Total robot execution time: {durtation_sum:.4f} seconds\n')
-            f.write(f"Total straight movements(3m): {total_straight} , {total_straight*3} meter\n") # 3m per straight movement
+            f.write(f'Total robot execution time: {duration_sum:.4f} seconds\n')
+            f.write(f"Total straight movements(3m): {total_straight} , {total_straight*3} meter\n")
             f.write(f"Total rotations: {total_rotate}\n")
             f.write(f"Total path length: {total_straight + total_rotate}\n")
-            f.write(f"average spd(straight): {(total_straight)/durtation_sum:.4f} straight/sec , {(total_straight*3)/durtation_sum:.4f} m/sec\n\n")
-            f.write(f"Overall efficiency: {(total_straight + total_rotate) / durtation_sum:.4f} units/second\n\n")
+            f.write(f"average spd(straight): {(total_straight)/duration_sum:.4f} straight/sec , {(total_straight*3)/duration_sum:.4f} m/sec\n\n")
+            f.write(f"Overall efficiency: {(total_straight + total_rotate) / duration_sum:.4f} units/second\n\n")
             
             f.write("Individual Robot Performance:\n")
             for robot, time_data in self.robot_time.items():
@@ -226,8 +255,8 @@ class PathFollowing(Node):
                     f.write(f"    Time: {time_data['duration']:.4f} seconds\n")
                     f.write(f"    Straight: {self.robot_movements[robot]['straight']}\n")
                     f.write(f"    Rotate: {self.robot_movements[robot]['rotate']}\n")
-                    f.write(f"    average spd(straight): {(self.robot_movements[robot]['straight']) / self.robot_time[robot]['duration']:.4f} straight/sec\n")
-                    f.write(f"    average spd(m): {(self.robot_movements[robot]['straight']*3) / self.robot_time[robot]['duration']:.4f} m/sec\n")
+                    f.write(f"    average spd(straight): {(self.robot_movements[robot]['straight']) / time_data['duration']:.4f} straight/sec\n")
+                    f.write(f"    average spd(m): {(self.robot_movements[robot]['straight']*3) / time_data['duration']:.4f} m/sec\n")
                     f.write(f"    Efficiency: {(self.robot_movements[robot]['straight'] + self.robot_movements[robot]['rotate']) / time_data['duration']:.4f} units/second\n")
             
             f.write(f"{'#'*50}\n\n")

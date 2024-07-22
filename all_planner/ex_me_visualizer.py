@@ -5,7 +5,8 @@ import os
 from matplotlib.collections import LineCollection
 from matplotlib.path import Path
 import matplotlib.patches as patches
-from map._map import obstacles_1,obstacles_p
+from map._map import obstacles_w,obstacles_p
+from all_planner.DICISION import RESULT_DIR
 
 def offset_curve(xs, ys, offset):
     """Offset curve (xs,ys) by offset."""
@@ -20,8 +21,6 @@ def offset_curve(xs, ys, offset):
     normal_vectors /= np.linalg.norm(normal_vectors, axis=1)[:, np.newaxis]
     
     return path.vertices + offset * normal_vectors
-
-RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
 
 class Visualizer:
     def __init__(self):
@@ -93,7 +92,7 @@ class Visualizer:
         print(f'A* step visualization saved as {filename}')
 
     @staticmethod
-    def visualize_path(obstacles, tb_id, start_pos, goal_pos, path):
+    def visualize_path(obstacles, tb_id, start_pos, goal_pos, path, map_name):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title(f'Path Planning for TB_{tb_id}')
         
@@ -101,14 +100,18 @@ class Visualizer:
         goal_pos = np.array(goal_pos)
         path = np.array(path)
         
-        # ax.set_xlim(-28.5, 28.5)
-        # ax.set_ylim(-16.5, 16.5)
-        # ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        # ax.set_yticks(np.arange(-13.5, 14.5, 3))
-        ax.set_xlim(-67.5, 67.5)
-        ax.set_ylim(-7.5, 7.5)
-        ax.set_xticks(np.arange(-64.5, 64.5, 3))
-        ax.set_yticks(np.arange(-7.5, 7.5, 3))
+        if map_name == 'map_wareh':
+            ax.set_xlim(-28.5, 28.5)
+            ax.set_ylim(-16.5, 16.5)
+            ax.set_xticks(np.arange(-25.5, 26.5, 3))
+            ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        elif map_name == 'map_pen':
+            ax.set_xlim(-67.5, 67.5)
+            ax.set_ylim(-7.5, 7.5)
+            ax.set_xticks(np.arange(-64.5, 64.5, 3))
+            ax.set_yticks(np.arange(-7.5, 7.5, 3))
+        else:
+            assert False , 'ADD NEW MAP NAME in ex_me_visualizer!!!XD'
         ax.grid(True)
 
         obstacles = obstacles[:, :2]
@@ -139,18 +142,22 @@ class Visualizer:
         print(f'Path visualization saved as {filename}')
 
     @staticmethod
-    def visualize_all_paths(obstacles, all_paths, all_starts, all_goals):
+    def visualize_all_paths(obstacles, all_paths, all_starts, all_goals,map_name):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title('Path Planning for All TBs')
         
-        # ax.set_xlim(-28.5, 28.5)
-        # ax.set_ylim(-16.5, 16.5)
-        # ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        # ax.set_yticks(np.arange(-13.5, 14.5, 3))
-        ax.set_xlim(-67.5, 67.5)
-        ax.set_ylim(-7.5, 7.5)
-        ax.set_xticks(np.arange(-64.5, 64.5, 3))
-        ax.set_yticks(np.arange(-7.5, 7.5, 3))
+        if map_name == 'map_wareh':
+            ax.set_xlim(-28.5, 28.5)
+            ax.set_ylim(-16.5, 16.5)
+            ax.set_xticks(np.arange(-25.5, 26.5, 3))
+            ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        elif map_name == 'map_pen':
+            ax.set_xlim(-67.5, 67.5)
+            ax.set_ylim(-7.5, 7.5)
+            ax.set_xticks(np.arange(-64.5, 64.5, 3))
+            ax.set_yticks(np.arange(-7.5, 7.5, 3))
+        else:
+            assert False , 'ADD NEW MAP NAME in ex_me_visualizer!!!XD'
         ax.grid(True)
 
         obstacles = obstacles[:, :2]
@@ -189,14 +196,22 @@ class Visualizer:
         print(f'All paths visualization saved as {filename}')
         
     @staticmethod
-    def visualize_all_paths_2(obstacles, all_paths, all_starts, all_goals):
+    def visualize_all_paths_2(obstacles, all_paths, all_starts, all_goals,map_name):
         fig, ax = plt.subplots(figsize=(16, 12))
         ax.set_title('Path Planning for All TBs')
         
-        ax.set_xlim(-28.5, 28.5)
-        ax.set_ylim(-16.5, 16.5)
-        ax.set_xticks(np.arange(-25.5, 26.5, 3))
-        ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        if map_name == 'map_wareh':
+            ax.set_xlim(-28.5, 28.5)
+            ax.set_ylim(-16.5, 16.5)
+            ax.set_xticks(np.arange(-25.5, 26.5, 3))
+            ax.set_yticks(np.arange(-13.5, 14.5, 3))
+        elif map_name == 'map_pen':
+            ax.set_xlim(-67.5, 67.5)
+            ax.set_ylim(-7.5, 7.5)
+            ax.set_xticks(np.arange(-64.5, 64.5, 3))
+            ax.set_yticks(np.arange(-7.5, 7.5, 3))
+        else:
+            assert False , 'ADD NEW MAP NAME in ex_me_visualizer!!!XD'
         ax.grid(True)
         
         obstacles = obstacles[:, :2]
@@ -241,3 +256,5 @@ class Visualizer:
         plt.close(fig)
         
         print(f'All2 paths visualization saved as {filename}')
+        
+        
