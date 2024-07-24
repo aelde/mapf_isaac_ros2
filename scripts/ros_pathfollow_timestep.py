@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import MultiArrayDimension, Float32MultiArray
@@ -23,7 +24,6 @@ class PathFollowing(Node):
         self.robot_time = {robot: {'start': None, 'end': None, 'duration': None} for robot in self.robots}
         self.robot_movements = {robot: {'straight': 0, 'rotate': 0} for robot in self.robots}
         
-        # New variables for timestep synchronization
         self.current_timestep = 0
         self.max_timesteps = 0
         self.robot_timesteps = {robot: [] for robot in self.robots}
@@ -33,17 +33,14 @@ class PathFollowing(Node):
         self.all_robots_completed = False
         self.all_robots_exec_time = []
         
-        # Subscriptions
         self.create_subscription(Odometry, 'tb_1_green/odom', self.tb_odom_cb, 10)
         self.create_subscription(Odometry, 'tb_2_red/odom', self.tb_odom_cb, 10)
         self.create_subscription(Odometry, 'tb_3_blue/odom', self.tb_odom_cb, 10)
         self.create_subscription(Tbpose2D, 'tb_pose2d', self.sub_tb2d_pos, 10)
         self.create_subscription(TbPathtoGoal, "TbPathtoGoal_top", self.tb_path_receive, 10)
         
-        # Publishers
         self.pub = {robot: self.create_publisher(Twist, f'/{robot}/cmd_vel', 10) for robot in self.robots}
         
-        # Timer to publish cmd_vel periodically
         self.timer = self.create_timer(0.1, self.publish_cmd_vel)  # 10 Hz update rate
 
     def tb_odom_cb(self, msg):
@@ -55,7 +52,7 @@ class PathFollowing(Node):
     
     def publish_cmd_vel(self):
         if not all(self.robot_path.values()):
-            return  # Wait until all robots have received their paths
+            return
 
         all_completed = True
         all_reached_current_timestep = True
@@ -94,12 +91,12 @@ class PathFollowing(Node):
         goal_p = self.robot_cur_goal[robot]
         curr_p = np.array(self.robot_pose2d[robot][:2])
         
-        # Check if we've reached the goal
+        # check reached the goal
         if np.linalg.norm(curr_p - goal_p) < 0.1:  # 10cm threshold
             self.robot_goals_reached[robot] = True
             return Twist()
 
-        # Calculate angle to goal
+        # calculate angle to goal
         a = goal_p - curr_p
         rot_goal = np.arctan2(a[1], a[0])
         robot_angle = np.radians(self.robot_pose2d[robot][2])
@@ -107,15 +104,15 @@ class PathFollowing(Node):
         
         cmd_vel = Twist()
         
-        # Proportional control for angular velocity
+        # proportional control for angular velocity
         Kp_angular = 1.5  # Tune this parameter
         cmd_vel.angular.z = Kp_angular * angle_diff
         
-        # Limit maximum angular velocity
+        # limit maximum angular velocity
         max_angular_vel = 1.5  # Adjust as needed
         cmd_vel.angular.z = max(min(cmd_vel.angular.z, max_angular_vel), -max_angular_vel)
         
-        # Only move forward if facing approximately the right direction
+        # only move forward if facing approximately the right direction
         if abs(angle_diff) < np.radians(20):  # 20 degrees threshold
             distance = np.linalg.norm(a)
             Kp_linear = 0.2  # Tune this parameter
