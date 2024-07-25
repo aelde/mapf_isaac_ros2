@@ -57,6 +57,7 @@ class RosPathPlanner(Node):
             {"id": 2, "tstep": 0},
             {"id": 3, "tstep": 0},
         ]
+        self.all_start = [{f'tb_{i+1}': []} for i in range(len(self.tb_pos))]
         self.map = glob_map_files()
         if self.map is None:
             self.get_logger().error('No map file found. Exiting.')
@@ -91,6 +92,11 @@ class RosPathPlanner(Node):
             self.pub_path_goal.publish(msg_path)
 
     def sub_tb_job_callback(self, msg):
+        if (msg.tb_id not in range(1,TOTAL_ROBOTS+1)) and (msg.tb_id != -1):
+            self.get_logger().error(f'tb_id:{msg.tb_id} dont EXITTTT...')
+            self.get_logger().error(f'bye EIEIE')
+            self.destroy_node()
+            rclpy.shutdown()
         self.tb_queue_job_task.append([msg.tb_id, np.array([msg.tb_goal.x, msg.tb_goal.y, msg.tb_goal.z])])
         print(f'tb_queue: \n{self.tb_queue_job_task}')
         print(f'****')
@@ -98,26 +104,47 @@ class RosPathPlanner(Node):
         if msg.start_routing:
             open_start = [i["start_pos"] for i in self.tb_pos]
             print(f'open_start: \n{open_start}')
-            for i in range(len(self.tb_queue_job_task)): # calculate norm from tb_queue_job_task[0] - tb_queue_job_task[n]
-                print([round(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]),2) for j in range(len(open_start))])
-                minn_norm = round(min(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]) for j in range(len(open_start))),2)
-                print(f'tb_queue_{i}: {self.tb_queue_job_task[i][1][:2]} , {CONV_POS_TO_NORMAL(self.tb_queue_job_task[i][1][:2])}')
-                print(f'minn_norm: {minn_norm}')
-                # minnn = min(self.tb_pos, key=lambda x: np.linalg.norm(self.tb_queue_job_task[i][1][:2] - np.array(x['start_pos'][:2])))
-                # print(f'minnn: \n{minnn}')
-                for j in self.tb_pos:
-                    if minn_norm == round(np.linalg.norm(self.tb_queue_job_task[i][1][:2] - j["start_pos"][:2]), 2):
-                        j["goal_pos"] = self.tb_queue_job_task[i][1] 
-                        print(f'j: {j["start_pos"]} , {CONV_POS_TO_NORMAL(j["start_pos"])}')
-                        open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
-                        print(f'open_start_{i}: {open_start}')
-            
+            for i in range(len(self.tb_queue_job_task)): 
+                if self.tb_queue_job_task[i][0] in range(1,TOTAL_ROBOTS+1): 
+                    for j in self.tb_pos:
+                        if j["id"] == self.tb_queue_job_task[i][0]:
+                            j["goal_pos"] = self.tb_queue_job_task[i][1] 
+                            open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
+                            print(f'open_start_{i}_specific: \n{open_start}')
+                            # j["start_pos"] = j["goal_pos"]
+                            for k in self.all_start:
+                                if k == j["name"]: 
+                                    k.append(j["start_pos"])
+                                    print(f'all_start: {k}')
+                elif self.tb_queue_job_task[i][0] == -1:
+                    # calculate norm from tb_queue_job_task[0] - tb_queue_job_task[n]
+                    print([round(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]),2) for j in range(len(open_start))])
+                    minn_norm = round(min(np.linalg.norm(self.tb_queue_job_task[i][1][:2]-open_start[j][:2]) for j in range(len(open_start))),2)
+                    print(f'tb_queue_{i}: {self.tb_queue_job_task[i][1][:2]} , {CONV_POS_TO_NORMAL(self.tb_queue_job_task[i][1][:2])}')
+                    print(f'minn_norm: {minn_norm}')
+                    # minnn = min(self.tb_pos, key=lambda x: np.linalg.norm(self.tb_queue_job_task[i][1][:2] - np.array(x['start_pos'][:2])))
+                    # print(f'minnn: \n{minnn}')
+                    for j in self.tb_pos:
+                        if minn_norm == round(np.linalg.norm(self.tb_queue_job_task[i][1][:2] - j["start_pos"][:2]), 2):
+                            j["goal_pos"] = self.tb_queue_job_task[i][1] 
+                            print(f'j: {j["start_pos"]} , {CONV_POS_TO_NORMAL(j["start_pos"])}')
+                            open_start = [i for i in open_start if not np.array_equal(i, j["start_pos"])]
+                            print(f'open_start_{i}_any: \n{open_start}')
+                            # j["start_pos"] = j["goal_pos"]
+                            for k in self.all_start:
+                                if k == j["name"]: 
+                                    k.append(j["start_pos"])
+                                    print(f'all_start: {k}')
+                else: print('ORTHER????')
             for i in self.tb_pos:
                 if i["goal_pos"] is not None: continue
                 else: i["goal_pos"] = i["start_pos"]
             
             print('Ending sub_tb_job_callback...')
             for i in self.tb_pos: print(i)
+            
+            print('allstart...')
+            for i in self.all_start: print(i)
             
             self.plan_and_publish_paths()
     
@@ -132,8 +159,12 @@ class RosPathPlanner(Node):
         goals = [(self.tb_pos[i]["goal_pos"][:2]) for i in range(len(self.tb_pos))]
         # normal_start = [convert_pos_to_normal_p(starts[i]) for i in range(len(starts))]
         normal_start = [CONV_POS_TO_NORMAL(starts[i]) for i in range(len(starts))]
-        
         normal_goals = [CONV_POS_TO_NORMAL(goals[i]) for i in range(len(goals))]
+        
+        # set new start
+        for i in self.tb_pos: i["start_pos"] = i["goal_pos"] 
+        print(f'new_start: \n{self.tb_pos}')
+        
         print(f'self.tb_pos len: {len(self.tb_pos)}')
         print(f'Starts: \n{starts}')
         print(f'Gaols: \n{goals}')

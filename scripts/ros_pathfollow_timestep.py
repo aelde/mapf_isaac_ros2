@@ -104,28 +104,24 @@ class PathFollowing(Node):
         
         cmd_vel = Twist()
         
-        # proportional control for angular velocity
-        Kp_angular = 1.5  # Tune this parameter
+        Kp_angular = 1.5  # joue this parameter
         cmd_vel.angular.z = Kp_angular * angle_diff
         
-        # limit maximum angular velocity
         max_angular_vel = 1.5  # Adjust as needed
         cmd_vel.angular.z = max(min(cmd_vel.angular.z, max_angular_vel), -max_angular_vel)
         
-        # only move forward if facing approximately the right direction
         if abs(angle_diff) < np.radians(20):  # 20 degrees threshold
             distance = np.linalg.norm(a)
             Kp_linear = 0.2  # Tune this parameter
             cmd_vel.linear.x = Kp_linear * distance
             
-            # Limit maximum linear velocity
             max_linear_vel = 0.2  # Adjust as needed
             cmd_vel.linear.x = min(cmd_vel.linear.x, max_linear_vel)
         
-        # Check proximity to other robots and adjust speed
+        # check proximity to other robots and adjust speed
         closest_distance = self.get_closest_robot_distance(robot)
         if closest_distance < 2:  # 10 cm threshold
-            slowdown_factor = closest_distance * 0.1  # Linear slowdown
+            slowdown_factor = closest_distance * 0.1  # linear slowdown
             cmd_vel.linear.x *= slowdown_factor
             cmd_vel.angular.z *= slowdown_factor
         

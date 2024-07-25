@@ -357,25 +357,29 @@ class A_Star(object):
             # print(f'le_g: {g_cost["rotate_left"]}')
             # print(f'ri_g: {g_cost["rotate_right"]}')
             
+            stop_cost = self.g_cost["stop"]
             straight_cost = self.g_cost["straight"]
             rotate_left_cost = self.g_cost["rotate_left"]
             rotate_right_cost = self.g_cost["rotate_right"]
             
             custom_g_cost = None
-            
-            if cross_product == 0:
+            if dirs == 4:
+                print(f'same loc, no move, stop!!! use: {stop_cost}')
+                custom_g_cost = stop_cost
+            elif cross_product == 0:
                 pass
-                print(f'same loc or parent loc, no need rot! use: {straight_cost}')
+                print(f'parent loc,bACkward??? , no need rot! use: {straight_cost}')
                 custom_g_cost = straight_cost
                 # continue
             elif needs_rotation:			
                 # print(f'cross_product: {cross_product}')
                 rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
                 custom_g_cost = rotation_cost
-                print(f"need rotation! use: {rotation_cost}")
+                print(f"need rotation! , NoMove Just rOtatet use: {rotation_cost}")
+                child_loc = curr
             else : 
                 pass
-                print(f"no need rotation! use: {straight_cost}")
+                print(f"STR, no need rotation! use: {straight_cost}")
                 custom_g_cost = straight_cost
                 # continue
             
