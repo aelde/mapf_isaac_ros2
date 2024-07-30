@@ -3,8 +3,11 @@ from matplotlib.patches import Circle, Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+import math
 
-Colors = ['green', 'red', 'blue','cyan']
+
+# Colors = ['green', 'red', 'blue','cyan']
+Colors = ['g', 'r', 'b','c','y','m','w','k']
 
 class Animation:
     def __init__(self, my_map, starts, goals, paths):
@@ -33,6 +36,16 @@ class Animation:
         self.artists = []
         self.agents = dict()
         self.agent_names = dict()
+        self.head_to = dict()
+        
+        self.current_angles = dict()
+        self.target_angles = dict()
+        self.initial_positions = dict()
+        for i in range(len(self.paths)):
+            self.current_angles[i] = 0
+            self.target_angles[i] = 0
+            self.initial_positions[i] = (starts[i][1], len(self.my_map[0]) - 1 - starts[i][0])
+        
         # create boundary patch
 
         x_min = -0.5
@@ -59,13 +72,30 @@ class Animation:
             self.agents[i] = Circle((starts[i][0], starts[i][1]), 0.3, facecolor=Colors[i % len(Colors)],
                                     edgecolor='black')
             self.agents[i].original_face_color = Colors[i % len(Colors)]
+            
+            # self.head_to[i] = Circle((starts[i][0], starts[i][1]), 0.3, facecolor=Colors[i % len(Colors)],edgecolor='black')
+            # self.head_to[i].original_face_color = Colors[i % len(Colors)]
+
+            
             self.patches.append(self.agents[i])
+            # self.patches.append(self.head_to[i])
+            
             # self.T = max(self.T+1, len(paths[i]))
             self.T = max(self.T, len(paths[i]) - 1)
             self.agent_names[i] = self.ax.text(starts[i][0], starts[i][1] + 0.25, name)
             self.agent_names[i].set_horizontalalignment('center')
             self.agent_names[i].set_verticalalignment('center')
             self.artists.append(self.agent_names[i])
+
+            self.head_to[i] = self.ax.text(starts[i][0] + 0.25, starts[i][1], ">")
+            self.head_to[i].set_horizontalalignment('center')
+            self.head_to[i].set_verticalalignment('center')
+            self.artists.append(self.head_to[i])
+
+            # Create an arrow with zero length initially
+            # self.head_to[i] = self.ax.arrow(starts[i][0], starts[i][1], 0, 0, 
+            #                                 head_width=0.2, head_length=0.2, fc=Colors[i % len(Colors)], ec='black')
+            # self.artists.append(self.head_to[i])
 
         self.animation = animation.FuncAnimation(self.fig, self.animate_func,
                                                  init_func=self.init_func,
@@ -92,11 +122,50 @@ class Animation:
         return self.patches + self.artists
 
     def animate_func(self, t):
+        current_timestep = int(t / 10)
+        
+        # Check if animation has restarted
+        if current_timestep == 0:
+            self.reset_indicators()
+        
+        # Check if animation has restarted
+        if current_timestep == 0:
+            self.reset_indicators()
+        
         for k in range(len(self.paths)):
-            pos = self.get_state(t / 10, self.paths[k])
-            self.agents[k].center = (pos[0], pos[1])
-            self.agent_names[k].set_position((pos[0], pos[1] + 0.5))
-
+            path = self.paths[k]
+            current_pos = np.array(self.get_state(t / 10, path))
+            
+            self.agents[k].center = (current_pos[0], current_pos[1])
+            self.agent_names[k].set_position((current_pos[0], current_pos[1] + 0.5))
+            
+            # Look ahead to find the next different position
+            next_pos = current_pos
+            next_timestep = current_timestep
+            while next_timestep + 1 < len(path):
+                next_timestep += 1
+                if not np.array_equal(path[next_timestep], current_pos):
+                    next_pos = np.array(path[next_timestep])
+                    break
+            
+            # Calculate the target angle for rotation
+            dx = next_pos[0] - current_pos[0]
+            dy = next_pos[1] - current_pos[1]
+            
+            if dx != 0 or dy != 0:  # Update target angle if there's a future movement
+                self.target_angles[k] = math.degrees(math.atan2(dy, dx))
+            
+            # Smoothly interpolate between current angle and target angle
+            interpolation_factor = 0.2  # Adjust this value to control rotation speed
+            angle_diff = (self.target_angles[k] - self.current_angles[k] + 180) % 360 - 180
+            self.current_angles[k] += angle_diff * interpolation_factor
+            
+            # Rotate and position the direction indicator
+            angle_rad = math.radians(self.current_angles[k])
+            self.head_to[k].set_position((current_pos[0] + 0.4 * math.cos(angle_rad), 
+                                          current_pos[1] + 0.4 * math.sin(angle_rad)))
+            self.head_to[k].set_rotation(self.current_angles[k])
+            
         # reset all colors
         for _, agent in self.agents.items():
             agent.set_facecolor(agent.original_face_color)
@@ -116,6 +185,14 @@ class Animation:
 
         return self.patches + self.artists
 
+    def reset_indicators(self):
+        for k in range(len(self.paths)):
+            self.current_angles[k] = 0
+            self.target_angles[k] = 0
+            initial_pos = self.initial_positions[k]
+            self.head_to[k].set_position((initial_pos[0] + 0.4, initial_pos[1]))
+            self.head_to[k].set_rotation(0)
+    
     @staticmethod
     def get_state(t, path):
         if int(t) <= 0:

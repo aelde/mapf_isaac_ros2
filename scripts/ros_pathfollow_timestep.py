@@ -15,7 +15,7 @@ class PathFollowing(Node):
     def __init__(self):
         super().__init__('multi_robot_cmd_vel_publisher')
         
-        self.robots = ['robot1', 'robot2', 'robot3']
+        # self.robots = ['robot1', 'robot2', 'robot3']
         self.robots = [f'robot{i}'for i in range(1,TOTAL_ROBOTS+1)]
         self.robot_pose2d = {robot: [0, 0, 0] for robot in self.robots}
         self.robot_path = {robot: None for robot in self.robots}

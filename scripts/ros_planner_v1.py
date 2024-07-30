@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import MultiArrayDimension, Float32MultiArray
+from std_msgs.msg import MultiArrayDimension, Float32MultiArray,Int32MultiArray
 import numpy as np
 from mapf_isaac.msg import TbPathtoGoal, TbTask, Tbpose2D
 from nav_msgs.msg import Odometry
@@ -40,15 +40,22 @@ def glob_map_files():
 
 class RosPathPlanner(Node):
     def __init__(self):
-        super().__init__('Astar_Path_Planner')
+        super().__init__('Path_Planner')
         
         self.sub_task = self.create_subscription(TbTask, 'all_tb_job_task', self.sub_tb_job_callback, 10)
         self.pub_path_goal = self.create_publisher(TbPathtoGoal, 'TbPathtoGoal_top', 10)
         self.sub_tb_pos = self.create_subscription(Tbpose2D, 'tb_pose2d', self.sub_tbs_pos_cb, 10)
+        self.sub_tb_is_moving = self.create_subscription(Int32MultiArray, 'robot_is_moving', self.sub_is_moving,10)
+        
+        # Subscriptions
+        self.create_subscription(Odometry, 'tb_1_green/odom', self.tb_odom_cb, 10)
+        self.create_subscription(Odometry, 'tb_2_red/odom', self.tb_odom_cb, 10)
+        self.create_subscription(Odometry, 'tb_3_blue/odom', self.tb_odom_cb, 10)
+        self.create_subscription(Odometry, 'tb_4_sky/odom', self.tb_odom_cb, 10)
         
         self.tb_queue_job_task = []
         self.tb_pos = [
-            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": None}
+            {"id": i, "name": f"tb_{i}", "curr_pos": np.zeros(3),"start_pos": np.zeros(3), "goal_pos": None, "is_moving": None}
             for i in range(1, TOTAL_ROBOTS+1)
         ]
         self.is_start = [True for i in range(TOTAL_ROBOTS)]
@@ -67,7 +74,16 @@ class RosPathPlanner(Node):
         # self.planner_control = PlannerControl(self.map)
         # self.astar_planner = AstarPlanner(self.map)
         # self.visualizer = Visualizer()
+    
+    def tb_odom_cb(self, msg):
+        pass  
+    def sub_is_moving(self, msg):
+        is_moving = [*msg.data]
+        for i,j in enumerate(self.tb_pos):
+            j["is_moving"] = is_moving[i]
 
+        # for i in self.tb_pos:print(i)
+        
     def sub_tbs_pos_cb(self, msg):
         for i in range(len(self.tb_pos)):
             if self.tb_pos[i]["id"]== msg.tb_id:
@@ -101,7 +117,14 @@ class RosPathPlanner(Node):
         print(f'tb_queue: \n{self.tb_queue_job_task}')
         print(f'****')
         
-        if msg.start_routing:
+        a = []
+        for i in range(len(self.tb_queue_job_task)): 
+            if self.tb_queue_job_task[i][0] in range(1,TOTAL_ROBOTS+1): 
+                for j in self.tb_pos:
+                    if j["id"] == self.tb_queue_job_task[i][0]:
+                        a.append(j["is_moving"])
+                        
+        if msg.start_routing and sum(a) == 0:
             open_start = [i["start_pos"] for i in self.tb_pos]
             print(f'open_start: \n{open_start}')
             for i in range(len(self.tb_queue_job_task)): 
@@ -147,6 +170,8 @@ class RosPathPlanner(Node):
             for i in self.all_start: print(i)
             
             self.plan_and_publish_paths()
+        
+        else: self.tb_queue_job_task = self.tb_queue_job_task
     
     def plan_and_publish_paths(self):
         # tasks = [(tb_job[0], tb_job[1]) for tb_job in self.tb_queue_job_task]

@@ -5,7 +5,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import os
-from all_planner.DICISION import RESULT_DIR,DIR_COST
+from all_planner.DICISION import RESULT_DIR,DIR_COST,RESULT_DIR_STEP
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same
@@ -130,7 +130,7 @@ class A_Star(object):
         self.closed_list = dict()
 
         self.g_cost = g_cost
-        print(f'G_COST: {g_cost}')
+        # print(f'G_COST: {g_cost}')
         # print(f'str_g: {g_cost["straight"]}')
         # print(f'le_g: {g_cost["rotate_left"]}')
         # print(f'ri_g: {g_cost["rotate_right"]}')
@@ -160,7 +160,7 @@ class A_Star(object):
     def push_node(self, node):
         # print('hey push_node...')
         f_value = node['g_val'] + node['h_val']
-        print(f'f: {f_value}')
+        # print(f'f: {f_value}')
         heapq.heappush(self.open_list, (f_value, node['h_val'], node['loc'], self.num_generated, node))
         self.num_generated += 1
         # print(f'num_gen: {self.num_generated}')
@@ -169,7 +169,7 @@ class A_Star(object):
         _,_,_, id, curr = heapq.heappop(self.open_list)
 
         self.num_expanded += 1
-        print(f'num_expan: {self.num_expanded}')
+        # print(f'num_expan: {self.num_expanded}')
         return curr
 
     # return a table that constains the list of constraints of all agents for each time step. 
@@ -208,8 +208,9 @@ class A_Star(object):
                 t_constraint.append(neg_constraint)
                 constraint_table[timestep] = t_constraint
         
+        print(f'constr_table: {constraint_table}')
         return constraint_table
-                
+        
 
     # returns if a move at timestep violates a "positive" or a "negative" constraint in c_table
     def constraint_violated(self, curr_loc, next_loc, timestep, c_table_agent, agent):
@@ -269,7 +270,6 @@ class A_Star(object):
 
         return False
 
-            
     def generate_child_nodes(self, curr):
         
         children = []
@@ -339,59 +339,213 @@ class A_Star(object):
             
             '''*************** new g cost cal ***************'''
             if curr['parent'] is not None:
-                parent_locc = np.array(curr['parent']['loc'])
+                # print(f'curr_p: {curr["parent"]}')
+                parent_locc = np.array(curr['parent']['loc'])            
+               
+
             else:
-                parent_locc = np.zeros(2)
+                # parent_locc =  np.array([self.starts[0][0],self.starts[0][1]-3]),
+                # parent_locc = np.zeros(2)
+                parent_locc = np.array([self.starts[0][0],self.starts[0][1]-1])
+
+                # print(f'PASENT is NONE!!!')
+                # parent_locc = np.array((curr['parent']['loc'][0],curr['parent']['loc'][1]-3))
                 # parent_locc = None  # or some default value
             curr_locc = np.array(curr['loc'][0])
             child_locc = np.array(child_loc[0])
-            print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
+            # print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}, cur_head: {curr["head_to"]}')
             
             direc = curr_locc - parent_locc
             new_direction_str = np.array(child_loc) - np.array(curr_locc)
             
+            
             needs_rotation = not np.array_equal(direc, new_direction_str) and not np.array_equal(direc, np.zeros(2))
             cross_product = np.cross(direc, new_direction_str)
+            
             
             # print(f'str_g: {g_cost["straight"]}')
             # print(f'le_g: {g_cost["rotate_left"]}')
             # print(f'ri_g: {g_cost["rotate_right"]}')
             
+            backward_cost = self.g_cost["backward"]
             stop_cost = self.g_cost["stop"]
             straight_cost = self.g_cost["straight"]
             rotate_left_cost = self.g_cost["rotate_left"]
             rotate_right_cost = self.g_cost["rotate_right"]
             
             custom_g_cost = None
-            if dirs == 4:
-                print(f'same loc, no move, stop!!! use: {stop_cost}')
+            
+            # HEAD_TO = child_loc[0]
+            HEAD_TO = None
+            
+            a = curr["head_to"] - child_locc
+            b = curr_locc - child_locc
+            can_move = False
+            can_backward = False
+            can_go_str = False
+            
+            if dirs[0] == 4:
+            # if np.array_equal(a,np.array([0,0])) and np.array_equal(parent_locc[0]-curr_locc,np.array([0,0])): 
+                # print(f'H: dirs=4 STOP')
                 custom_g_cost = stop_cost
-            elif cross_product == 0:
-                pass
-                print(f'parent loc,bACkward??? , no need rot! use: {straight_cost}')
+                can_go_str = True
+                HEAD_TO = curr["head_to"]
+            if a[0] == 2 and a[1] == 0: 
+                # print(f'H: backward_up')
+                custom_g_cost = backward_cost
+                can_backward = True
+                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
+                HEAD_TO = curr_locc
+            elif a[0] == -2 and a[1] == 0:
+                # print(f'H: backward_down')
+                custom_g_cost = backward_cost
+                can_backward = True
+                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
+                HEAD_TO = curr_locc
+            elif a[0] == 0 and a[1] == 2:
+                # print(f'H: backward_left')
+                custom_g_cost = backward_cost
+                can_backward = True
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1]
+                HEAD_TO = curr_locc
+            elif a[0] == 0 and a[1] == -2:
+                # print(f'H: backward_left')
+                custom_g_cost = backward_cost
+                can_backward = True
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])                
+                HEAD_TO = curr_locc
+            elif np.array_equal(a,np.array([-1,1])) and np.array_equal(b,np.array([-1,0])):
+                # print(f'H: rot_right_to_down')
+                custom_g_cost = rotate_right_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([1,1])) and np.array_equal(b,np.array([0,1])):
+                # print(f'H: rot_right_to_left')
+                custom_g_cost = rotate_right_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([1,-1])) and np.array_equal(b,np.array([1,0])):
+                # print(f'H: rot_right_to_up')
+                custom_g_cost = rotate_right_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([-1,-1])) and np.array_equal(b,np.array([0,-1])):
+                # print(f'H: rot_right_to_right')
+                custom_g_cost = rotate_right_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([1,1])) and np.array_equal(b,np.array([1,0])):
+                # print(f'H: rot_left_to_up')
+                custom_g_cost = rotate_left_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([-1,1])) and np.array_equal(b,np.array([0,1])):
+                # print(f'H: rot_left_to_left')
+                custom_g_cost = rotate_left_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([-1,-1])) and np.array_equal(b,np.array([-1,0])):
+                # print(f'H: rot_left_to_down')
+                custom_g_cost = rotate_left_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
+                HEAD_TO = child_locc
+            elif np.array_equal(a,np.array([1,-1])) and np.array_equal(b,np.array([0,-1])):
+                # print(f'H: rot_left_to_right')
+                custom_g_cost = rotate_left_cost
+                child_loc[0] = (curr_locc[0],curr_locc[1])
+                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
+                HEAD_TO = child_locc
+            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([1,0])): 
+                # print(f'H: Go_STR_to_up')
                 custom_g_cost = straight_cost
-                # continue
-            elif needs_rotation:			
-                # print(f'cross_product: {cross_product}')
-                rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
-                custom_g_cost = rotation_cost
-                print(f"need rotation! , NoMove Just rOtatet use: {rotation_cost}")
-                child_loc = curr
-            else : 
-                pass
-                print(f"STR, no need rotation! use: {straight_cost}")
+                can_go_str = True
+                HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
+            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([0,1])): 
+                # print(f'H: Go_STR_to_left')                
                 custom_g_cost = straight_cost
-                # continue
+                can_go_str = True
+                HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
+            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([-1,0])): 
+                # print(f'H: Go_STR_to_down')
+                custom_g_cost = straight_cost
+                can_go_str = True
+                HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
+            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([0,-1])): 
+                # print(f'H: Go_STR_to_right')
+                custom_g_cost = straight_cost
+                can_go_str = True
+                HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
+            # elif np.array_equal(b,np.array([0,0])):
+            #     print(f'H: almost last stop')
+            #     custom_g_cost = stop_cost
+            #     can_go_str = True
+            #     HEAD_TO = curr["head_to"]
+            else:
+                pass 
+                # print('WTF BRO')
+            
+            # print(f'bugbug: {np.array_equal(curr["head_to"],child_locc)}, {np.array_equal(a,np.array([1,0]))}')
+            # print(f'a: {a}, {np.array([1,0])}')
+            # # a = curr["head_to"] - child_locc
+            # print(f'child: {child_locc}')
+            # print(f'curr')
+
+
+            
+            if any([can_go_str,can_backward]):
+                can_move = True
+            
+            # if np.array_equal(parent_locc, curr_locc) and np.array_equal(curr["head_to"],child_loc[0]) : 
+            #     print('H: stop')
+            #     print('stop...')
+            # elif np.array_equal(parent_locc, curr_locc) and np.array_equal(curr["head_to"],) : 
+            #     print('H: After Rotate Go STR')
+            # elif np.array_equal(parent_locc, curr_locc) and not np.array_equal(curr["head_to"],HEAD_TO) : 
+            #     print('H: need to Rotate')
+            # elif np.array_equal(curr["head_to"],child_loc[0]):
+            #     print('H: same as head_to GO STR')
+            #     print('str...')
+            #     HEAD_TO = np.array([child_loc[0][0]+0,child_loc[0][0]+1])
+            # if dirs[0] == 4:
+            #     print(f'same loc, no move, stop!!! use: {stop_cost}')
+            #     custom_g_cost = stop_cost
+            # elif np.array_equal(parent_locc, HEAD_TO):
+            #     print(f'H: going to Parent! BACKWARD!! use: {backward_cost}')
+            #     custom_g_cost = backward_cost
+            # elif cross_product == 0:
+            #     pass
+            #     print(f'parent loc,bACkward??? , no need rot! use: {straight_cost}')
+            #     custom_g_cost = straight_cost
+            #     # continue
+            # elif needs_rotation:			
+            #     # print(f'cross_product: {cross_product}')
+            #     rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
+            #     custom_g_cost = rotation_cost
+            #     print(f"need rotation! , NoMove Just rOtatet use: {rotation_cost}")
+            #     child_loc[0] = (curr_locc[0],curr_locc[1])
+            # else : 
+            #     pass
+            #     print(f"STR, no need rotation! use: {straight_cost}")
+            #     custom_g_cost = straight_cost
+            #     continue
             
             
             # g_value = curr['g_val'] + num_moves
             g_value = curr['g_val'] + custom_g_cost
             '''***************"***************"***************'''
-
-            print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
+            # print(f'child_loc: {child_loc}')
+            # print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves},can_mov:{can_move}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
 
             reached_goal = [False for i in range(len(self.agents))]
 
+            # print(f'reach_go: {reached_goal[i]}, child_loc: {child_loc[i]}, goals[i]: {self.goals[i]}')
             for i, a in enumerate(self.agents):
                 
                 if not reached_goal[i] and child_loc[i] == self.goals[i]:
@@ -411,13 +565,20 @@ class A_Star(object):
                     'h_val': h_value,
                     'parent': curr,
                     'timestep': curr['timestep']+1,
-                    'reached_goal': copy.deepcopy(reached_goal)
+                    'reached_goal': copy.deepcopy(reached_goal),
+                    'head_to': HEAD_TO,
+                    'can_move': can_move,
                     } 
 
             children.append(child)
 
             # print(f'children: \n{children}')
         return children
+
+    def is_invalid_move(self, loc):
+        return (loc[0] < 0 or loc[0] >= len(self.my_map) or
+                loc[1] < 0 or loc[1] >= len(self.my_map[0]) or
+                self.my_map[loc[0]][loc[1]])
 
     def compare_nodes(self, n1, n2):
         """Return true is n1 is better than n2."""
@@ -456,9 +617,13 @@ class A_Star(object):
                 # 'F_val' : h_value, # only consider children with f_val == F_val
                 'g_val': 0, 
                 'h_val': h_value, 
-                'parent': None,
+                'parent': None,               
+                # 'parent': None,
+                # 'parent': np.array((self.starts[0][0],self.starts[0][1]-3)),
                 'timestep': 0,
-                'reached_goal': [False for i in range(len(self.agents))]
+                'reached_goal': [False for i in range(len(self.agents))],
+                'head_to': np.array([self.starts[0][0],self.starts[0][1]+1]),# self.starts[0][1]+3 in my_real_world,
+                'can_move': True
                 }
 
         # check if any any agents are already at goal loc
@@ -484,19 +649,20 @@ class A_Star(object):
             #     return
 
             curr = self.pop_node()
-            print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
+            # print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
             
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
             # print(curr['reached_goal'] )
 
             if solution_found:
-                print(f'end... agent: {self.agents}')
+                # print(f'end... agent: {self.agents}')
                 # convert_normal_to_pos()
-                print(f'end_cuur ag_{self.agents}: \n{curr}')
+                # print(f'end_cuur ag_{self.agents}: \n{curr}')
                 return get_path(curr,self.agents)
 
 
             children = self.generate_child_nodes(curr)
+            # children_for_visualize = self.generate_child_nodes_for_visualize_only(curr)
 
             for child in children:
 
@@ -513,11 +679,12 @@ class A_Star(object):
                 #     self.push_node(child)
 
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
-                    existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
-                    if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                        print("child is better than existing in closed list")
-                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                        self.push_node(child)
+                    # print('hi')
+                    # existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
+                    # if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
+                    #     print("child is better than existing in closed list")
+                    self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                    self.push_node(child)
                 else:
                     # print('bye child ',child['loc'])
                     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
@@ -532,8 +699,10 @@ class A_Star(object):
 
             # if (tuple(curr['loc']),curr['timestep']) not in self.closed_list:
             #     self.closed_list[(tuple(curr['loc']),curr['timestep'])] = curr
-            
+            #
             # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
+            # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children_for_visualize, step_count)
+
             step_count += 1
         print('no solution')
 
@@ -541,8 +710,6 @@ class A_Star(object):
         return None        
 
     def visualize_each_step(self, curr, my_map, h_cost, children, step_count):
-        
-        # print(f'close_list vi: {self.closed_list}')
         n_x, n_y = len(my_map), len(my_map[0])
         
         fig, ax = plt.subplots(figsize=(n_y, n_x))
@@ -593,15 +760,19 @@ class A_Star(object):
                     g_str = ','.join(map(str, sorted(g_values)))
                     f_str = ','.join(map(str, sorted(f_values)))
                     
-                    if len(sorted(g_values)) > 0:
-                        print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
-                        g_str = str(sorted(g_values)[0])
-                        f_str = str(sorted(f_values)[0])
-                        g_str = str(round(float(g_str),2))
-                        f_str = str(round(float(f_str),2))
-                    
-                    h_value = str(round(float(h_value),2))
+                    if len(sorted(g_values)) == 1:
+                        g_str = str(round(float(sorted(g_values)[0]), 2))
+                        f_str = str(round(float(sorted(f_values)[0]), 2))
+                        # g_str = str(round(list(g_values)[-1], 2))
+                        # f_str = str(round(list(f_values)[-1], 2))          
+                    elif len(sorted(g_values)) > 1:
+                        g_str = str(round(float(sorted(g_values)[0]), 2))
+                        f_str = str(round(float(sorted(f_values)[0]), 2))
+                        
+                        # print(f'g_values:{g_values}, f_values:{f_values}, h_value:{h_value},x/y:{x},{y}')
+                    h_value = str(round(float(h_value), 2))
 
+                    # cell_text = f'h:{h_value}\ng:{g_str}\nf:{f_str}'
                     cell_text = f'h:{h_value}\ng:{g_str}\nf:{f_str}'
                     ax.text(y, x, cell_text, ha='center', va='center', fontsize=13, 
                             color='red' if my_map[x][y] else 'black')
@@ -610,7 +781,7 @@ class A_Star(object):
         obstacle_mask = np.array(my_map, dtype=bool)
         ax.imshow(obstacle_mask, cmap='binary', alpha=0.3)
         
-        # Plot explored nodes as small red rectangles
+        # Plot explored nodes as small green rectangles
         for pos in explored_positions:
             rect = plt.Rectangle((pos[1] - 0.4, pos[0] - 0.4), 0.8, 0.8, 
                                 fill=False, facecolor='green', edgecolor='green', alpha=0.3)
@@ -654,19 +825,30 @@ class A_Star(object):
                 ax.plot(pos[1], pos[0], color=colors[i], marker='.', markersize=6, alpha=0.5)
                 ax.plot([curr['loc'][i][1], pos[1]], [curr['loc'][i][0], pos[0]], 
                         color=colors[i], linestyle='--', linewidth=1, alpha=0.5)
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.set_aspect('equal', 'box')
+
+        # Plot curr["head_to"] as a small red dot
+        if "head_to" in curr:
+            head_to = curr["head_to"]
+            ax.plot(head_to[1], head_to[0], color='red', marker='.', markersize=8, label='Head To')
         
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         ax.set_aspect('equal', 'box')
         
         # Create result directory if it doesn't exist
-        result_dir = RESULT_DIR + f'/step/'
+        result_dir = RESULT_DIR_STEP
         os.makedirs(result_dir, exist_ok=True)
+        
+        d = timer.time()
         
         # Save the plot for each agent
         for agent in self.agents:
             agent_dir = os.path.join(result_dir, f'robot_{agent+1}')
             os.makedirs(agent_dir, exist_ok=True)
+            # filename = os.path.join(agent_dir, f'step_{step_count:04d}_{d}.png')
             filename = os.path.join(agent_dir, f'step_{step_count:04d}.png')
+
             plt.savefig(filename, dpi=300, bbox_inches='tight')
         
         plt.close(fig)

@@ -163,7 +163,7 @@ class Visualizer:
         obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
-        colors = ['g', 'r', 'b','c']
+        colors = ['g', 'r', 'b','c','y','m','w','k']
         
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
             # print(f'tb number: {i+1} :: color: {colors[i]} :: start: {start}')
@@ -217,8 +217,8 @@ class Visualizer:
         obstacles = obstacles[:, :2]
         ax.scatter(obstacles[:, 1], obstacles[:, 0], c='k', marker='s', s=100, label='Obstacles')
         
-        colors = ['g', 'r', 'b','c']
-        offsets = [-0.2, 0, 0.2, 0.4]  # offsets for each path
+        colors = ['g', 'r', 'b','c','y','m','w','k']
+        offsets = [-0.6,-0.4,-0.2, 0, 0.2, 0.4,0.6,0.8]  # offsets for each path
         
         for i, (path, start, goal) in enumerate(zip(all_paths, all_starts, all_goals)):
             path = np.array(path)

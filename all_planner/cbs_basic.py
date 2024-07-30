@@ -2,7 +2,7 @@ import time as timer
 import heapq
 import random
 import matplotlib.pyplot as plt
-from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+from REMAKE_a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgba
@@ -163,8 +163,9 @@ def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
     fig, axs = plt.subplots(1, num_agents, figsize=(6*num_agents, 6), squeeze=False)
     fig.suptitle('Map Visualization with Start, Goal Positions, and Heuristics', fontsize=16)
     
-    colors = ['lime', 'deeppink', 'blue','cyan']
-    
+    # colors = ['lime', 'deeppink', 'blue','cyan']
+    colors = ['g', 'r', 'b','c','y','m','w','k']
+
     for i in range(num_agents):
         ax = axs[0, i]
         
@@ -199,7 +200,7 @@ def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
         # Set labels and title
         ax.set_xlabel('Y')
         ax.set_ylabel('X')
-        ax.set_title(f'Agent {i}')
+        ax.set_title(f'Robot {i+1}')
         
         # Invert y-axis to match the coordinate system in the code
         # ax.invert_yaxis()
@@ -239,6 +240,7 @@ def detect_collisions(paths):
     #           A collision can be represented as dictionary that contains the id of the two robots, the vertex or edge
     #           causing the collision, and the timestep at which the collision occurred.
     #           You should use your detect_collision function to find a collision between two robots.
+    print(f'SUB BRO')
     collisions = []
     for i in range(len(paths)-1):
         for j in range(i+1, len(paths)):
@@ -248,6 +250,7 @@ def detect_collisions(paths):
                                    'a2': j,
                                    'loc': position,
                                    'timestep': t+1})
+    print(f'collis: {collisions}')
     return collisions
 
 
@@ -384,9 +387,10 @@ class CBSSolver(object):
         visualize_map_and_heuristics(self.my_map, self.starts, self.goals, self.heuristics)
         
     def push_node(self, node):
-        heapq.heappush(self.open_list, (node['cost'], len(
-            node['collisions']), self.num_of_generated, node))
-        # print("Generate node {}".format(self.num_of_generated))
+        # heapq.heappush(self.open_list, (node['cost'], len(
+        #     node['collisions']), self.num_of_generated, node))
+        heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
+        print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
     def pop_node(self):
@@ -455,20 +459,29 @@ class CBSSolver(object):
         #             3. Otherwise, choose the first collision and convert to a list of constraints (using your
         #                standard_splitting function). Add a new child node to your open list for each constraint
         #           Ensure to create a copy of any objects that your child nodes might inherit
-
+        print(f'open_lis_1: {self.open_list}')
+        count = 0
         while len(self.open_list) > 0:
             # if self.num_of_generated > 50000:
             #     print('reached maximum number of nodes. Returning...')
             #     return None
+            count+=1
+            print(f'count: {count}')
             print("Open list: ", self.open_list)
             p = self.pop_node()
+            print(f'P IS:: {p}')
             if p['collisions'] == []:
+                print(f'YOYO EMPTY...')
                 #*******************************************************************************************************
                 mypos = {
                     'agent_0': [],
                     'agent_1': [],
                     'agent_2': [],
                     'agent_3': [],
+                    'agent_4': [],
+                    'agent_5': [],
+                    'agent_6': [],
+                    'agent_7': [],
                 }
                 self.print_results(p)
                 # print(len(p["paths"]))
@@ -520,6 +533,7 @@ class CBSSolver(object):
 
                 if path is not None:
                     q['paths'][ai] = path[0]
+                    a = q['paths'][ai]
                     
                      # Visualize each step of the new solution
                     # max_path_length = max(len(path) for path in q['paths'])
@@ -541,7 +555,15 @@ class CBSSolver(object):
                                 q['paths'][v] = path_v[0]
                         if continue_flag:
                             continue
+                    print(f'q[paths][{ai}]: {q["paths"][ai]}')
+                    # bb = q['collisions']
+                    print(f'q[collis] before: {q["collisions"]}')
+                    
                     q['collisions'] = detect_collisions(q['paths'])
+                    # ba = q['collisions']
+                    
+                    print(f'q[collis] after: {q["collisions"]}')
+
                     q['cost'] = get_sum_of_cost(q['paths'])
                     self.push_node(q)
         return None

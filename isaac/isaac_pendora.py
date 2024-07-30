@@ -70,6 +70,8 @@ class Subscriber(Node):
         self.ros_world = World(stage_units_in_meters=1.0)
         # self.ros_world.scene.add_default_ground_plane()
         
+        self.all_paths_count = 0
+        
         warehouse_path = "/home/eggs/obo_isaac_simulation/usd/pendora4.usd"
         warehouse_prim_path = "/World/pendora"
         stage_utils.add_reference_to_stage(usd_path=warehouse_path, prim_path=warehouse_prim_path)
@@ -78,6 +80,10 @@ class Subscriber(Node):
         tb_usd_path_red = "/home/eggs/obo_isaac_simulation/usd/turtlebot3red.usd"
         tb_usd_path_blue = "/home/eggs/obo_isaac_simulation/usd/turtlebot3blue.usd"
         tb_usd_path_sky = "/home/eggs/obo_isaac_simulation/usd/turtlebot4sky.usd"
+        tb_yellow = "/home/eggs/obo_isaac_simulation/usd/turtlebot3yellow.usd"
+        tb_purple = "/home/eggs/obo_isaac_simulation/usd/turtlebot3purple.usd"
+        tb_white = "/home/eggs/obo_isaac_simulation/usd/turtlebot3white.usd"
+        tb_black = "/home/eggs/obo_isaac_simulation/usd/turtlebot3black.usd"
         
         cylider_light_1 = prim_utils.create_prim(
             "/World/CylinderLight_1",
@@ -93,9 +99,9 @@ class Subscriber(Node):
         
         #-------------------- declare param
 
-        # c = green , red , blue
-        tb_color = [[0,1,0],[1,0,0],[0,0,1],[0,1,1]]
-        tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue,tb_usd_path_sky]
+        # c =        green , red   , blue  , bluesky,yellow, purple, white , black
+        tb_color = [[0,1,0],[1,0,0],[0,0,1],[0,1,1],[1,1,0],[1,0,1],[1,1,1],[0,0,0]]
+        tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue,tb_usd_path_sky,tb_yellow,tb_purple,tb_white,tb_black]
         start_pos = [j for i,j in ROBOT_START.items()]
         # print('start_pos :',start_pos)
         
@@ -246,13 +252,15 @@ class Subscriber(Node):
                 self.ros_world.scene.add(
                     VisualCylinder(
                         position=pos_rot["pos"],
-                        prim_path=f'/World/Link_{tb_id}_{i+1}',
-                        name=f'link_{tb_id}_{i+1}',
+                        prim_path=f'/World/Link_{tb_id}_{i+1}_{self.all_paths_count}',
+                        name=f'link_{tb_id}_{i+1}_{self.all_paths_count}',
                         orientation=pos_rot["rot"],
                         scale=np.array([0.1, 0.1, 3.0]),
                         color=self.tb_job[tb_id-1]["color"]
                     )
                 )
+                
+                self.all_paths_count += 1
             else:
                 print(f"Skipping VisualCylinder for identical consecutive points at index {i}")
     def run_simulation(self):

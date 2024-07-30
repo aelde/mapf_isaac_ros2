@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import MultiArrayDimension, Float32MultiArray
+from std_msgs.msg import MultiArrayDimension, Float32MultiArray, Int32MultiArray
 from mapf_isaac.msg import TbPathtoGoal, TbTask, Tbpose2D
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
@@ -9,14 +9,15 @@ import numpy as np
 import time
 from datetime import datetime
 import os
-from all_planner.DICISION import WS_DIR,TOTAL_ROBOTS
+from all_planner.DICISION import WS_DIR, TOTAL_ROBOTS
 
 class PathFollowing(Node):
     def __init__(self):
-        super().__init__('multi_robot_cmd_vel_publisher')
+        super().__init__('Path_Follower')
         
         # self.robots = [f'robot{i+1}' for i in range(TOTAL_ROBOTS)]
-        self.robots = ['robot1', 'robot2', 'robot3']
+        self.robots = [f'robot{i}'for i in range(1,TOTAL_ROBOTS+1)]
+        # self.robots = ['robot1', 'robot2', 'robot3']
         self.robot_pose2d = {robot: [0, 0, 0] for robot in self.robots}
         self.robot_path = {robot: None for robot in self.robots}
         self.robot_goals_reached = {robot: False for robot in self.robots}
@@ -34,14 +35,21 @@ class PathFollowing(Node):
         self.create_subscription(Odometry, 'tb_1_green/odom', self.tb_odom_cb, 10)
         self.create_subscription(Odometry, 'tb_2_red/odom', self.tb_odom_cb, 10)
         self.create_subscription(Odometry, 'tb_3_blue/odom', self.tb_odom_cb, 10)
+        self.create_subscription(Odometry, 'tb_4_sky/odom', self.tb_odom_cb, 10)
+        
         self.create_subscription(Tbpose2D, 'tb_pose2d', self.sub_tb2d_pos, 10)
         self.create_subscription(TbPathtoGoal, "TbPathtoGoal_top", self.tb_path_receive, 10)
         
         # Publishers
         self.pub = {robot: self.create_publisher(Twist, f'/{robot}/cmd_vel', 10) for robot in self.robots}
         
+        self.robot_is_moving = {robot: 0 for robot in self.robots}
+        # New publisher for robot movement status
+        self.movement_status_pub = self.create_publisher(Int32MultiArray, '/robot_is_moving', 10)
+        
+        
         # Timer to publish cmd_vel periodically
-        # self.timer = self.create_timer(0.1, self.publish_cmd_vel)  # 10 Hz update rate
+        self.timer = self.create_timer(0.1, self.publish_cmd_vel)  # 10 Hz update rate
 
     def tb_odom_cb(self, msg):
         pass  
@@ -52,35 +60,43 @@ class PathFollowing(Node):
     
     def publish_cmd_vel(self):
         all_completed = True
-        all_reached_current_timestep = True
+        movement_status = Int32MultiArray()
+        movement_status.data = [self.robot_is_moving[robot] for robot in self.robots]
+
         
         for robot in self.robots:
-            if self.robot_path[robot] is not None :
+            if self.robot_path[robot] is not None:
                 all_completed = False
-                if self.robot_goals_reached[robot] :
+                if self.robot_goals_reached[robot]:
                     self.robot_goals_reached[robot] = False
-                    # self.robot_goals_reached = {i: False for i in self.robot_goals_reached}
                     self.robot_path[robot].pop(0)
-                    # for i,j in self.robot_path.items(): self.robot_path[i] = j.pop(0)
 
                 if len(self.robot_path[robot]) == 0:
                     self.robot_path[robot] = None
                     self.robot_time[robot]['end'] = time.time()
                     self.robot_time[robot]['duration'] = self.robot_time[robot]['end'] - self.robot_time[robot]['start']
-                    # self.log_robot_time(robot)
+                    self.robot_is_moving[robot] = 0
                     continue
 
                 self.robot_cur_goal[robot] = np.array(self.robot_path[robot][0][:2])
+                self.robot_is_moving[robot] = 1
 
             cmd_vel = self.calculate_cmd_vel(robot)
             self.pub[robot].publish(cmd_vel)
 
+         # Update movement status data
+        movement_status.data = [self.robot_is_moving[robot] for robot in self.robots]
+        
+        # Publish movement status
+        self.movement_status_pub.publish(movement_status)
+
+        
         if all_completed and not self.all_robots_completed:
             if all(robot['duration'] is not None for robot in self.robot_time.values()):
                 self.all_robots_completed = True
                 self.log_total_time()
 
-    def calculate_cmd_vel(self, robot , timestep):
+    def calculate_cmd_vel(self, robot):
         if self.robot_cur_goal[robot] is None:
             return Twist()
         
@@ -88,9 +104,9 @@ class PathFollowing(Node):
         curr_p = np.array(self.robot_pose2d[robot][:2])
         
         # Check if we've reached the goal
-        if np.linalg.norm(curr_p - goal_p) < 0.1:  # 10cm threshold
+        if np.linalg.norm(curr_p - goal_p) < 0.2:  # 10cm threshold
             self.robot_goals_reached[robot] = True
-            self.reached_goal_timestep[timestep][robot] = True
+            # self.reached_goal_timestep[timestep][robot] = True
             return Twist()
 
         # Calculate angle to goal
@@ -103,25 +119,42 @@ class PathFollowing(Node):
         
         # Proportional control for angular velocity
         # Kp_angular = 0.5  # Tune this parameter
-        Kp_angular = 1.5  # Tune this parameter
+        Kp_angular = 0.8  # Tune this parameter
         cmd_vel.angular.z = Kp_angular * angle_diff
         
         # Limit maximum angular velocity
-        max_angular_vel = 1.5  # Adjust as needed
-        cmd_vel.angular.z = max(min(cmd_vel.angular.z, max_angular_vel), -max_angular_vel)
+        max_angular_vel = 0.9  # Adjust as needed
+        cmd_vel.angular.z = max(min(cmd_vel.angular.z, max_angular_vel), -max_angular_vel+0.5)
         
         # Only move forward if facing approximately the right direction
-        if abs(angle_diff) < np.radians(20):  # 20 degrees threshold
+        if abs(angle_diff) < np.radians(25):  # 20 degrees threshold
             distance = np.linalg.norm(a)
-            Kp_linear = 0.2  # Tune this parameter
+            Kp_linear = 0.1  # Tune this parameter
             cmd_vel.linear.x = Kp_linear * distance
             
             # Limit maximum linear velocity
-            max_linear_vel = 0.2  # Adjust as needed
+            max_linear_vel = 0.1  # Adjust as needed
             cmd_vel.linear.x = min(cmd_vel.linear.x, max_linear_vel)
+
+        # check proximity to other robots and adjust speed
+        closest_distance = self.get_closest_robot_distance(robot)
+        if closest_distance < 1:  # 10 cm threshold
+            slowdown_factor = closest_distance * 0.1  # linear slowdown
+            cmd_vel.linear.x *= slowdown_factor
+            cmd_vel.angular.z *= slowdown_factor
         
         return cmd_vel
 
+    def get_closest_robot_distance(self, robot):
+        curr_pos = np.array(self.robot_pose2d[robot][:2])
+        distances = []
+        for other_robot, pose in self.robot_pose2d.items():
+            if other_robot != robot:
+                other_pos = np.array(pose[:2])
+                distance = np.linalg.norm(curr_pos - other_pos)
+                distances.append(distance)
+        return min(distances) if distances else float('inf')
+    
     def normalize_angle(self, angle):
         while angle > np.pi:
             angle -= 2 * np.pi
@@ -136,13 +169,16 @@ class PathFollowing(Node):
         dim0_size = msg.listofpath.layout.dim[0].size
         dim1_size = msg.listofpath.layout.dim[1].size
         re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
+        print(f're_tb_path: {re_tb_path}')
         robot_id = f'robot{tb_id}'
         self.robot_path[robot_id] = re_tb_path
         
-        # self.reached_goal_at_timestep = 
+        # Set robot as moving when it receives a new path
+        self.robot_is_moving[robot_id] = 1
         
-        # print(f"Robot {robot_id} path: {re_tb_path}")
-        # print()
+        # Set start time when path is received
+        if self.robot_time[robot_id]['start'] is None:
+            self.robot_time[robot_id]['start'] = time.time()
         
         # Reset movement counters
         self.robot_movements[robot_id]['straight'] = 0
@@ -165,12 +201,7 @@ class PathFollowing(Node):
                 curr_direction = (curr_point[0] - prev_point[0], curr_point[1] - prev_point[1])
                 if prev_direction != curr_direction:
                     self.robot_movements[robot_id]['rotate'] += 1
-        
-        
-        # Set start time when path is received
-        if self.robot_time[robot_id]['start'] is None:
-            self.robot_time[robot_id]['start'] = time.time()
-        
+                
         print(f"Robot {robot_id} movements - Straight: {self.robot_movements[robot_id]['straight']}, "
             f"Rotate: {self.robot_movements[robot_id]['rotate']}")
 

@@ -7,6 +7,7 @@ WS_DIR = f'/home/eggs/humble_mapf/src/mapf_isaac'
 M_PEN =  'isaac_pendora.py'
 M_WAREH = 'isaac_warehouse.py'
 RESULT_DIR = '/home/eggs/humble_mapf/src/mapf_isaac/result/path'
+RESULT_DIR_STEP = '/home/eggs/humble_mapf/src/mapf_isaac/result/step'
 
 def load_uneven_astar_config():
     config_dir = 'config/uneven_astar.yaml'
