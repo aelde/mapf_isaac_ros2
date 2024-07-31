@@ -32,9 +32,12 @@ costs:
   #backward: 1.0
   backward: 2.5
   stop: 1.0
-  straight: 0.25
-  rotate_left: 0.5
-  rotate_right: 0.5
+  # straight: 0.25
+  # rotate_left: 0.5
+  # rotate_right: 0.5
+  straight: 0.5
+  rotate_left: 0.2
+  rotate_right: 0.2
   # straight: 0.6
   # rotate_left: 0.1
   # rotate_right: 0.1
