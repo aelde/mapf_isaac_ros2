@@ -470,7 +470,7 @@ class CBSSolver(object):
             #     return None
             count+=1
             print(f'count: {count}')
-            print("Open list: ", self.open_list)
+            # print("Open list: ", self.open_list)
             p = self.pop_node()
             print(f'P IS:: {p}')
             if p['collisions'] == []:
@@ -499,9 +499,11 @@ class CBSSolver(object):
                 # number of nodes generated/expanded for comparing implementations
                 return p['paths'], self.num_of_generated, self.num_of_expanded
             collision = p['collisions'].pop(0)
+            print(f'collision pop0: {collision}')
             # constraints = standard_splitting(collision)
             # constraints = disjoint_splitting(collision)
             constraints = splitter(collision)
+            print(f'constraints after spl: {constraints}')
                 #*******************************************************************************************************
             
             ############################################################################################################

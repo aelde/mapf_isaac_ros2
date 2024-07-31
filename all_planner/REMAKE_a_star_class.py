@@ -16,8 +16,8 @@ def get_sum_of_cost(paths):
     rst = 0
     for path in paths:
         rst += len(path) - 1
-        if(len(path)>1):
-            assert path[-1] != path[-2]
+        # if(len(path)>1):
+        #     assert path[-1] != path[-2]
     return rst
 
     
@@ -97,13 +97,13 @@ def get_path(goal_node,meta_agent):
 
         print(f'get_path: {path[i]}')
 
-        if len(path[i]) > 1: 
-            # remove trailing duplicates
-            while path[i][-1] == path[i][-2]:
-                path[i].pop()
-                print(path[i])
-                if len(path[i]) <= 1:
-                    break
+        # if len(path[i]) > 1: 
+        #     # remove trailing duplicates
+        #     while path[i][-1] == path[i][-2]:
+        #         path[i].pop()
+        #         print(path[i])
+        #         if len(path[i]) <= 1:
+        #             break
             # assert path[i][-1] != path[i][-2] # no repeats at the end!!
 
     assert path is not None
@@ -387,10 +387,10 @@ class A_Star(object):
             if dirs[0] == 4:
             # if np.array_equal(a,np.array([0,0])) and np.array_equal(parent_locc[0]-curr_locc,np.array([0,0])): 
                 # print(f'H: dirs=4 STOP')
-                custom_g_cost = stop_cost
+                custom_g_cost = stop_cost + 10
                 can_go_str = True
                 HEAD_TO = curr["head_to"]
-            if a[0] == 2 and a[1] == 0: 
+            elif a[0] == 2 and a[1] == 0: 
                 # print(f'H: backward_up')
                 custom_g_cost = backward_cost
                 can_backward = True
@@ -489,7 +489,7 @@ class A_Star(object):
             #     HEAD_TO = curr["head_to"]
             else:
                 pass 
-                # print('WTF BRO')
+                print('WTF BRO')
             
             # print(f'bugbug: {np.array_equal(curr["head_to"],child_locc)}, {np.array_equal(a,np.array([1,0]))}')
             # print(f'a: {a}, {np.array([1,0])}')
@@ -602,11 +602,13 @@ class A_Star(object):
 
         for i, a in enumerate(self.agents):
             table_i = self.build_constraint_table(a)
-            print(table_i)
+            print(f'table_i: {table_i}')
+
             self.c_table.append(table_i)
             if table_i.keys():
                 self.max_constraints[i] = max(table_i.keys())
-
+        print(f'c_table: {self.c_table}')
+        print(f'max_cont: {self.max_constraints[i]}')
 
         h_value = sum([self.heuristics[i][self.starts[i]] for i in range(len(self.agents))])
         # print(f'h_value: {h_value}')
@@ -629,11 +631,11 @@ class A_Star(object):
         # check if any any agents are already at goal loc
         for i, a in enumerate(self.agents):
             if root['loc'][i] == self.goals[i]:
-
+                print(f'YO in : root[loc][i] == self.goals[i]')
                 if root['timestep'] <= self.max_constraints[i]:
                     if not self.future_constraint_violated(root['loc'][i], root['timestep'], self.max_constraints[i] ,self.c_table[i], self.agents[i]):
                         root['reached_goal'][i] = True
-
+                        print(f'YO in: reached_goal=True')
                         self.max_constraints[i] = 0
 
 
@@ -679,12 +681,17 @@ class A_Star(object):
                 #     self.push_node(child)
 
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
+                    existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
+                    if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
+                        # print("child is better than existing in closed list")
+                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                        self.push_node(child)
                     # print('hi')
-                    # existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
-                    # if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                    #     print("child is better than existing in closed list")
-                    self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                    self.push_node(child)
+                        print("child is better than existing in closed list")
+                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                        self.push_node(child)
+                    # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                    # self.push_node(child)
                 else:
                     # print('bye child ',child['loc'])
                     self.closed_list[(tuple(child['loc']),child['timestep'])] = child

@@ -35,9 +35,12 @@ costs:
   # straight: 0.25
   # rotate_left: 0.5
   # rotate_right: 0.5
-  straight: 0.5
-  rotate_left: 0.2
-  rotate_right: 0.2
+  # straight: 0.5
+  # rotate_left: 0.2
+  # rotate_right: 0.2
+  straight: 1
+  rotate_left: 1
+  rotate_right: 1
   # straight: 0.6
   # rotate_left: 0.1
   # rotate_right: 0.1

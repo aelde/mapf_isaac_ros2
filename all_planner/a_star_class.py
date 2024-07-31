@@ -130,7 +130,7 @@ class A_Star(object):
         self.closed_list = dict()
 
         self.g_cost = g_cost
-        print(f'G_COST: {g_cost}')
+        # print(f'G_COST: {g_cost}')
         # print(f'str_g: {g_cost["straight"]}')
         # print(f'le_g: {g_cost["rotate_left"]}')
         # print(f'ri_g: {g_cost["rotate_right"]}')
@@ -160,7 +160,7 @@ class A_Star(object):
     def push_node(self, node):
         # print('hey push_node...')
         f_value = node['g_val'] + node['h_val']
-        print(f'f: {f_value}')
+        # print(f'f: {f_value}')
         heapq.heappush(self.open_list, (f_value, node['h_val'], node['loc'], self.num_generated, node))
         self.num_generated += 1
         # print(f'num_gen: {self.num_generated}')
@@ -169,7 +169,7 @@ class A_Star(object):
         _,_,_, id, curr = heapq.heappop(self.open_list)
 
         self.num_expanded += 1
-        print(f'num_expan: {self.num_expanded}')
+        # print(f'num_expan: {self.num_expanded}')
         return curr
 
     # return a table that constains the list of constraints of all agents for each time step. 
@@ -345,7 +345,7 @@ class A_Star(object):
                 # parent_locc = None  # or some default value
             curr_locc = np.array(curr['loc'][0])
             child_locc = np.array(child_loc[0])
-            print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
+            # print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
             
             direc = curr_locc - parent_locc
             new_direction_str = np.array(child_loc) - np.array(curr_locc)
@@ -365,17 +365,17 @@ class A_Star(object):
             
             if cross_product == 0:
                 pass
-                print(f'same loc or parent loc, no need rot! use: {straight_cost}')
+                # print(f'same loc or parent loc, no need rot! use: {straight_cost}')
                 custom_g_cost = straight_cost
                 # continue
             elif needs_rotation:			
                 # print(f'cross_product: {cross_product}')
                 rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
                 custom_g_cost = rotation_cost
-                print(f"need rotation! use: {rotation_cost}")
+                # print(f"need rotation! use: {rotation_cost}")
             else : 
                 pass
-                print(f"no need rotation! use: {straight_cost}")
+                # print(f"no need rotation! use: {straight_cost}")
                 custom_g_cost = straight_cost
                 # continue
             
@@ -384,7 +384,7 @@ class A_Star(object):
             g_value = curr['g_val'] + custom_g_cost
             '''***************"***************"***************'''
 
-            print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
+            # print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
 
             reached_goal = [False for i in range(len(self.agents))]
 
@@ -437,11 +437,12 @@ class A_Star(object):
 
         for i, a in enumerate(self.agents):
             table_i = self.build_constraint_table(a)
-            print(table_i)
+            print(f'table_i: {table_i}')
             self.c_table.append(table_i)
             if table_i.keys():
                 self.max_constraints[i] = max(table_i.keys())
-
+        print(f'c_table: {self.c_table}')
+        print(f'max_cont: {self.max_constraints[i]}')
 
         h_value = sum([self.heuristics[i][self.starts[i]] for i in range(len(self.agents))])
         # print(f'h_value: {h_value}')
@@ -460,9 +461,10 @@ class A_Star(object):
         # check if any any agents are already at goal loc
         for i, a in enumerate(self.agents):
             if root['loc'][i] == self.goals[i]:
-
+                print(f'YO in : root[loc][i] == self.goals[i]')
                 if root['timestep'] <= self.max_constraints[i]:
                     if not self.future_constraint_violated(root['loc'][i], root['timestep'], self.max_constraints[i] ,self.c_table[i], self.agents[i]):
+                        print(f'YO in: reached_goal=True')
                         root['reached_goal'][i] = True
 
                         self.max_constraints[i] = 0
@@ -480,7 +482,7 @@ class A_Star(object):
             #     return
 
             curr = self.pop_node()
-            print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
+            # print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
             
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
             # print(curr['reached_goal'] )
@@ -488,7 +490,7 @@ class A_Star(object):
             if solution_found:
                 print(f'end... agent: {self.agents}')
                 # convert_normal_to_pos()
-                print(f'end_cuur ag_{self.agents}: \n{curr}')
+                # print(f'end_cuur ag_{self.agents}: \n{curr}')
                 return get_path(curr,self.agents)
 
 
@@ -511,7 +513,7 @@ class A_Star(object):
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
                     existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
                     if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                        print("child is better than existing in closed list")
+                        # print("child is better than existing in closed list")
                         self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                         self.push_node(child)
                 else:
@@ -590,7 +592,7 @@ class A_Star(object):
                     f_str = ','.join(map(str, sorted(f_values)))
                     
                     if len(sorted(g_values)) > 0:
-                        print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
+                        # print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
                         g_str = str(sorted(g_values)[0])
                         f_str = str(sorted(f_values)[0])
                         g_str = str(round(float(g_str),2))
