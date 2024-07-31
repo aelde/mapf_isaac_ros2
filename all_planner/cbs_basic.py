@@ -387,9 +387,9 @@ class CBSSolver(object):
         visualize_map_and_heuristics(self.my_map, self.starts, self.goals, self.heuristics)
         
     def push_node(self, node):
-        heapq.heappush(self.open_list, (node['cost'], len(
-            node['collisions']), self.num_of_generated, node))
-        # heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
+        # heapq.heappush(self.open_list, (node['cost'], len(
+        #     node['collisions']), self.num_of_generated, node))
+        heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
         # heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
         print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
