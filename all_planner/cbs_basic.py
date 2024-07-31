@@ -2,7 +2,9 @@ import time as timer
 import heapq
 import random
 import matplotlib.pyplot as plt
-from REMAKE_a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+# from REMAKE_a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgba
