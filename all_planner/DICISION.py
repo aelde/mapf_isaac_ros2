@@ -7,8 +7,8 @@ import visualize_old
 
 import a_star_class
 
-# ANI_VISUAL = visualize
-ANI_VISUAL = visualize_old
+ANI_VISUAL = visualize
+# ANI_VISUAL = visualize_old
 
 # ASTAR_IS = a_star_class
 

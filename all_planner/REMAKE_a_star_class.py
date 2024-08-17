@@ -707,7 +707,7 @@ class A_Star(object):
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
                     existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
                     # if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                        # print("child is better than existing in closed list")
+                        # # print("child is better than existing in closed list")
                         # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                         # self.push_node(child)
                         # print('hi')
