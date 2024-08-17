@@ -8,7 +8,9 @@ import os
 from all_planner.DICISION import RESULT_DIR,DIR_COST,RESULT_DIR_STEP
 
 def move(loc, dir):
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same    
+    # directions = [(0, 0), (1, 0), (0, 0), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same
+
     return loc[0] + directions[dir][0], loc[1] + directions[dir][1]
 
 
@@ -17,7 +19,7 @@ def get_sum_of_cost(paths):
     for path in paths:
         rst += len(path) - 1
         # if(len(path)>1):
-        #     assert path[-1] != path[-2]
+            # assert path[-1] != path[-2]
     return rst
 
     
@@ -84,30 +86,45 @@ def get_location(path, time):
 
 def get_path(goal_node,meta_agent):
     path = []
+    head_to = []
+    curr = goal_node
+
+    print(f'path : {curr["loc"]}')
+
+    print(f'curr_head : {curr["head_to"]}')
     for i in range(len(meta_agent)):
         path.append([])
-    curr = goal_node
+        head_to.append([])
+        # head_to.append([])
+
+        print(f'path app: {path}')
+        print(f'head app: {head_to}')
     while curr is not None:
         for i in range(len(meta_agent)):
             path[i].append(curr['loc'][i])
+            head_to[i].append(tuple(curr['head_to']))
         curr = curr['parent']
     for i in range(len(meta_agent)):
         path[i].reverse()
+        head_to[i].reverse()
         assert path[i] is not None
 
         print(f'get_path: {path[i]}')
+        print(f'head_to: {head_to[i]}')
 
         # if len(path[i]) > 1: 
-        #     # remove trailing duplicates
-        #     while path[i][-1] == path[i][-2]:
-        #         path[i].pop()
-        #         print(path[i])
-        #         if len(path[i]) <= 1:
-        #             break
+            # remove trailing duplicates
+            # while path[i][-1] == path[i][-2]:
+            #     path[i].pop()
+            #     print(path[i])
+            #     if len(path[i]) <= 1:
+            #         break
             # assert path[i][-1] != path[i][-2] # no repeats at the end!!
 
     assert path is not None
-    return path
+    print('HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHh')
+    print(head_to)
+    return path , head_to
 
 class A_Star(object):
 
@@ -679,23 +696,32 @@ class A_Star(object):
                 #     # print('bye child ',child['loc'])
                 #     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                 #     self.push_node(child)
-
+                
+                # if child['can_move']:
+                #     print(f'yyoyoooo')
+                #     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                #     self.push_node(child)
+                    # print(f'Astar close list: {self.closed_list}')
+                
+                # ***************************
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
                     existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
-                    if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
+                    # if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
                         # print("child is better than existing in closed list")
-                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                        self.push_node(child)
-                    # print('hi')
-                        print("child is better than existing in closed list")
-                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                        self.push_node(child)
-                    # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                    # self.push_node(child)
+                        # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                        # self.push_node(child)
+                        # print('hi')
+                        # print("child is better than existing in closed list")
+                        # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                        # self.push_node(child)
+                    self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                    self.push_node(child)
                 else:
                     # print('bye child ',child['loc'])
                     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                     self.push_node(child)
+                
+                # ***************************
 
                 # if (tuple(child['loc']),child['timestep']) not in self.closed_list:
                 #     # existing_node = self.closed_list[(tuple(child['loc']),child['timestep'])]

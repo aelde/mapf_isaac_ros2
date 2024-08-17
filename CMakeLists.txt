@@ -28,6 +28,7 @@ install(PROGRAMS
   scripts/ros_planner_v1.py
   scripts/ros_run_isaacsim.py
   scripts/ros_pathfollow_timestep.py
+  scripts/ros_pathfol.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

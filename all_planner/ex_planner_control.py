@@ -1,7 +1,7 @@
 import random
 import cbs_basic, a_star_class ,single_agent_planner, visualize
 import numpy as np
-
+from DICISION import ANI_VISUAL
 D_HISOVLER = 'CBS'
 D_LOWSOLVER = 'Astar'
 class PlannerControl:
@@ -16,7 +16,7 @@ class PlannerControl:
     def plan_paths(map,start_pos,goal_pos):
         cbs = cbs_basic.CBSSolver(map,start_pos,goal_pos)
         solution = cbs.find_solution(False)
-        paths, nodes_gen, nodes_exp = solution[:3]
+        paths, nodes_gen, nodes_exp, head_to = solution[:4]
         # PlannerControl.print_solution(solution)
         # PlannerControl.show_animation(map, start_pos, goal_pos, paths)
         return solution
@@ -28,8 +28,9 @@ class PlannerControl:
         print()
         
     @staticmethod   
-    def show_animation(map, start_pos, goal_pos, paths):
-        animation = visualize.Animation(map, start_pos, goal_pos, paths)
+    def show_animation(map, start_pos, goal_pos, paths,head_to):
+        # animation = visualize.Animation(map, start_pos, goal_pos, paths)
+        animation = ANI_VISUAL.Animation(map, start_pos, goal_pos, paths,head_to)
         animation.show()
     
     def print_config(self):

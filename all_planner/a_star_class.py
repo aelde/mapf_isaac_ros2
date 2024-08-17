@@ -5,7 +5,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import os
-from all_planner.DICISION import RESULT_DIR,DIR_COST
+from DICISION import RESULT_DIR,DIR_COST
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same
@@ -492,6 +492,7 @@ class A_Star(object):
                 # convert_normal_to_pos()
                 # print(f'end_cuur ag_{self.agents}: \n{curr}')
                 return get_path(curr,self.agents)
+                xx
 
 
             children = self.generate_child_nodes(curr)

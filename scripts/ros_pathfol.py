@@ -27,6 +27,11 @@ class PathFollowing(Node):
         self.robot_head_to = {robot: None for robot in self.robots}
         # self.reached_goal_timestep = [{**{robot: False for robot in self.robots}, 'timestep': j} for j in range(max(len(i) for i in self.robot_path))]
         # self.robot_timestep = None
+
+        # to make stop time        
+        self.robot_wait_time = {robot: 0 for robot in self.robots}
+        self.robot_wait_start = {robot: None for robot in self.robots}
+
         
         self.all_robots_completed = False
         
@@ -66,9 +71,8 @@ class PathFollowing(Node):
         movement_status = Int32MultiArray()
         movement_status.data = [self.robot_is_moving[robot] for robot in self.robots]
 
-        
         for robot in self.robots:
-            if self.robot_path[robot] is not None:
+            if self.robot_path[robot] is not None and len(self.robot_path[robot]) > 0:
                 all_completed = False
                 if self.robot_goals_reached[robot]:
                     self.robot_goals_reached[robot] = False
@@ -83,71 +87,114 @@ class PathFollowing(Node):
 
                 self.robot_cur_goal[robot] = np.array(self.robot_path[robot][0][:2])
                 self.robot_is_moving[robot] = 1
+                
+                # cmd_vel = self.calculate_cmd_vel(robot)
+                # self.pub[robot].publish(cmd_vel)
 
             cmd_vel = self.calculate_cmd_vel(robot)
             self.pub[robot].publish(cmd_vel)
 
-         # Update movement status data
+        # Update movement status data
         movement_status.data = [self.robot_is_moving[robot] for robot in self.robots]
         
         # Publish movement status
         self.movement_status_pub.publish(movement_status)
 
-        
         if all_completed and not self.all_robots_completed:
             if all(robot['duration'] is not None for robot in self.robot_time.values()):
                 self.all_robots_completed = True
                 self.log_total_time()
 
     def calculate_cmd_vel(self, robot):
-        if self.robot_cur_goal[robot] is None:
-            return Twist()
+        if self.robot_cur_goal[robot] is None or self.robot_path[robot] is None or len(self.robot_path[robot]) == 0:
+            return self.stop()
         
-        goal_p = self.robot_cur_goal[robot]
+        current_goal = np.array(self.robot_path[robot][0][:2])
         curr_p = np.array(self.robot_pose2d[robot][:2])
         
-        # Check if we've reached the goal
-        if np.linalg.norm(curr_p - goal_p) < 0.2:  # 10cm threshold
-            self.robot_goals_reached[robot] = True
-            # self.reached_goal_timestep[timestep][robot] = True
-            return Twist()
+        # check if reached the current goal
+        if np.linalg.norm(curr_p - current_goal) < 0.4:  # 20cm 
+            # Find the next non-repeat goal
+            next_non_repeat_index = 1
+            while next_non_repeat_index < len(self.robot_path[robot]) and np.array_equal(self.robot_path[robot][next_non_repeat_index][:2], current_goal):
+                next_non_repeat_index += 1
+            
+            # repeats = next_non_repeat_index - 1
+            repeats = next_non_repeat_index
 
-        # Calculate angle to goal
-        a = goal_p - curr_p
+            
+            if repeats > 1:
+                if self.robot_wait_start[robot] is None:
+                    self.robot_wait_start[robot] = time.time()
+                
+                # # Wait for the first second
+                # if time.time() - self.robot_wait_start[robot] < 1.0:
+                #     return self.stop()
+                
+                if next_non_repeat_index < len(self.robot_path[robot]):
+                        next_goal = np.array(self.robot_path[robot][next_non_repeat_index][:2])
+                        a = next_goal - curr_p
+                        rot_goal = np.arctan2(a[1], a[0])
+                        robot_angle = np.radians(self.robot_pose2d[robot][2])
+                        angle_diff = self.normalize_angle(rot_goal - robot_angle)
+                        
+                        if abs(angle_diff) > np.radians(5):  # If we need to rotate more than 5 degrees
+                            if angle_diff > 0:
+                                return self.rotate_left()
+                            else:
+                                return self.rotate_right()
+                        # else: 
+                        #     # if time.time() - self.robot_wait_start[robot] < 1.0:
+                        #     return self.stop()
+                    
+                if time.time() - self.robot_wait_start[robot] < repeats - 0.07:
+                    return self.stop()
+                
+                # If there's more than one repeat, use the second repeat for rotation
+                # if repeats > 1:
+                #     if next_non_repeat_index < len(self.robot_path[robot]):
+                #         next_goal = np.array(self.robot_path[robot][next_non_repeat_index][:2])
+                #         a = next_goal - curr_p
+                #         rot_goal = np.arctan2(a[1], a[0])
+                #         robot_angle = np.radians(self.robot_pose2d[robot][2])
+                #         angle_diff = self.normalize_angle(rot_goal - robot_angle)
+                        
+                #         if abs(angle_diff) > np.radians(10):  # If we need to rotate more than 5 degrees
+                #             if angle_diff > 0:
+                #                 return self.rotate_left()
+                #             else:
+                #                 return self.rotate_right()
+                    
+                #     # If rotation is complete or not needed, wait for the remaining time
+                #     if time.time() - self.robot_wait_start[robot] < repeats:
+                #         return self.stop()
+            
+            self.robot_wait_start[robot] = None
+            self.robot_goals_reached[robot] = True
+            for _ in range(next_non_repeat_index - 1): 
+                self.robot_path[robot].pop(0)
+            return self.stop()
+
+        a = current_goal - curr_p
         rot_goal = np.arctan2(a[1], a[0])
         robot_angle = np.radians(self.robot_pose2d[robot][2])
         angle_diff = self.normalize_angle(rot_goal - robot_angle)
         
-        cmd_vel = Twist()
+        if abs(angle_diff) < np.radians(10):  # faacing
+            return self.go_straight()
+        elif angle_diff > 0:
+            cmd_vel =  self.rotate_left()
+        else:
+            cmd_vel = self.rotate_right()
         
-        # Proportional control for angular velocity
-        # Kp_angular = 0.5  # Tune this parameter
-        Kp_angular = 1.1  # Tune this parameter
-        cmd_vel.angular.z = Kp_angular * angle_diff
-        
-        # Limit maximum angular velocity
-        max_angular_vel = 1.1  # Adjust as needed
-        cmd_vel.angular.z = max(min(cmd_vel.angular.z, max_angular_vel), -max_angular_vel+0.5)
-        
-        # Only move forward if facing approximately the right direction
-        if abs(angle_diff) < np.radians(25):  # 20 degrees threshold
-            distance = np.linalg.norm(a)
-            Kp_linear = 0.1  # Tune this parameter
-            cmd_vel.linear.x = Kp_linear * distance
-            
-            # Limit maximum linear velocity
-            max_linear_vel = 0.1  # Adjust as needed
-            cmd_vel.linear.x = min(cmd_vel.linear.x, max_linear_vel)
-
-        # check proximity to other robots and adjust speed
-        closest_distance = self.get_closest_robot_distance(robot)
-        if closest_distance < 1:  # 10 cm threshold
-            slowdown_factor = closest_distance * 0.1  # linear slowdown
-            cmd_vel.linear.x *= slowdown_factor
-            cmd_vel.angular.z *= slowdown_factor
+        # closest_distance = self.get_closest_robot_distance(robot)
+        # if closest_distance < 3:  # 10 cm threshold
+        #     slowdown_factor = closest_distance * 0.1  # linear slowdown
+        #     cmd_vel.linear.x *= slowdown_factor
+        #     cmd_vel.angular.z *= slowdown_factor
         
         return cmd_vel
-
+    
     def get_closest_robot_distance(self, robot):
         curr_pos = np.array(self.robot_pose2d[robot][:2])
         distances = []
@@ -157,6 +204,44 @@ class PathFollowing(Node):
                 distance = np.linalg.norm(curr_pos - other_pos)
                 distances.append(distance)
         return min(distances) if distances else float('inf')
+
+    def check_wait_time(self, robot):
+        if len(self.robot_path[robot]) < 2:
+            return 0
+        
+        current_goal = self.robot_path[robot][0][:2]
+        wait_time = 0
+        
+        for next_goal in self.robot_path[robot][1:]:
+            if np.array_equal(current_goal, next_goal[:2]):
+                wait_time += 1
+            else:
+                break
+        
+        return wait_time
+
+    def go_straight(self):
+        cmd_vel = Twist()
+        cmd_vel.linear.x = 0.67
+        return cmd_vel
+
+    def rotate_left(self):
+        cmd_vel = Twist()
+        cmd_vel.angular.z = 0.67 
+        return cmd_vel
+
+    def rotate_right(self):
+        cmd_vel = Twist()
+        cmd_vel.angular.z = -0.67  
+        return cmd_vel
+
+    def stop(self):
+        return Twist()  
+
+    def backward(self):
+        cmd_vel = Twist()
+        cmd_vel.linear.x = -0.6 
+        return cmd_vel
     
     def normalize_angle(self, angle):
         while angle > np.pi:
@@ -166,36 +251,44 @@ class PathFollowing(Node):
         return angle
     
     def tb_head_to_receive(self, msg):
-        print(f'dfsdjfopjspkd.;f,;s,df[,]')
+        print(f'Received head_to message')
         tb_id = msg.tb_id
         data = msg.listofpath.data
         dim0_size = msg.listofpath.layout.dim[0].size
         dim1_size = msg.listofpath.layout.dim[1].size
         re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
-        print(f'head_t0_re: {re_tb_path}')
+        # print(f'head_to_re: {re_tb_path}')
         robot_id = f'robot{tb_id}'
-        self.robot_head_to[robot_id] = re_tb_path
-        print(f'head_to : ')
-        for i,j in self.robot_head_to.items():
-            print(f'{i}')
-            for k in j: 
-                if j is not None or k is not None:
-                    print(k)
-        print(f'path_to : ')
-        for i,j in self.robot_path.items():
-            print(f'{i}, {j}')
+        self.robot_head_to[robot_id] = re_tb_path if re_tb_path else []  # Set to empty list if re_tb_path is falsy
+        # print(f'head_to : ')
+        # for i, j in self.robot_head_to.items():
+        #     print(f'{i}')
+            # if j:  # Only iterate if j is not None and not empty
+            #     for k in j: 
+            #         print(k)
+        # print(f'path_to : ')
+        # for i, j in self.robot_path.items():
+        #     print(f'{i}, {j}')
 
     
     def tb_path_receive(self, msg):
-        # print(f"Received path for robot {msg.tb_id}")
         tb_id = msg.tb_id
         data = msg.listofpath.data
         dim0_size = msg.listofpath.layout.dim[0].size
         dim1_size = msg.listofpath.layout.dim[1].size
         re_tb_path = [data[i * dim1_size:(i + 1) * dim1_size] for i in range(dim0_size)]
-        # print(f're_tb_path: {re_tb_path}')
+        
         robot_id = f'robot{tb_id}'
-        self.robot_path[robot_id] = re_tb_path
+        self.robot_path[robot_id] = re_tb_path if re_tb_path else []
+        print(f'pathttt : ')
+        for i, j in self.robot_path.items():
+            print(f'{i}')
+            if j:  # Only iterate if j is not None and not empty
+                for k in j: 
+                    print(k)
+        # print(f'path_to : ')
+        # for i, j in self.robot_path.items():
+        #     print(f'{i}, {j}')
         
         # Set robot as moving when it receives a new path
         self.robot_is_moving[robot_id] = 1
@@ -209,23 +302,24 @@ class PathFollowing(Node):
         self.robot_movements[robot_id]['rotate'] = 0
         
         # Calculate straight movements and rotations
-        for i in range(1, len(re_tb_path)):
-            prev_point = re_tb_path[i-1]
-            curr_point = re_tb_path[i]
-            
-            # Check if it's a straight movement
-            if (prev_point[0] == curr_point[0] and prev_point[1] != curr_point[1]) or \
-            (prev_point[1] == curr_point[1] and prev_point[0] != curr_point[0]):
-                self.robot_movements[robot_id]['straight'] += 1
-            
-            # Check if it's a rotation (change in direction)
-            if i > 1:
-                prev_prev_point = re_tb_path[i-2]
-                prev_direction = (prev_point[0] - prev_prev_point[0], prev_point[1] - prev_prev_point[1])
-                curr_direction = (curr_point[0] - prev_point[0], curr_point[1] - prev_point[1])
-                if prev_direction != curr_direction:
-                    self.robot_movements[robot_id]['rotate'] += 1
+        if re_tb_path and len(re_tb_path) > 1:
+            for i in range(1, len(re_tb_path)):
+                prev_point = re_tb_path[i-1]
+                curr_point = re_tb_path[i]
                 
+                # Check if it's a straight movement
+                if (prev_point[0] == curr_point[0] and prev_point[1] != curr_point[1]) or \
+                (prev_point[1] == curr_point[1] and prev_point[0] != curr_point[0]):
+                    self.robot_movements[robot_id]['straight'] += 1
+                
+                # Check if it's a rotation (change in direction)
+                if i > 1:
+                    prev_prev_point = re_tb_path[i-2]
+                    prev_direction = (prev_point[0] - prev_prev_point[0], prev_point[1] - prev_prev_point[1])
+                    curr_direction = (curr_point[0] - prev_point[0], curr_point[1] - prev_point[1])
+                    if prev_direction != curr_direction:
+                        self.robot_movements[robot_id]['rotate'] += 1
+                    
         print(f"Robot {robot_id} movements - Straight: {self.robot_movements[robot_id]['straight']}, "
             f"Rotate: {self.robot_movements[robot_id]['rotate']}")
 

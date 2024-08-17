@@ -4,6 +4,9 @@ import random
 import matplotlib.pyplot as plt
 # from REMAKE_a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
 from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+# from DICISION import A_Star, get_location, get_sum_of_cost, compute_heuristics
+
+# from DICISION import A_Star, get_location, get_sum_of_cost, compute_heuristics
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
@@ -391,8 +394,8 @@ class CBSSolver(object):
     def push_node(self, node):
         # heapq.heappush(self.open_list, (node['cost'], len(
         #     node['collisions']), self.num_of_generated, node))
-        heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
         # heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
+        heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
         print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
@@ -427,21 +430,29 @@ class CBSSolver(object):
         root = {'cost': 0,
                 'constraints': [],
                 'paths': [],
-                'collisions': []}
+                'collisions': [],
+                'head_to': []}
 
         for i in range(self.num_of_agents):  # Find initial path for each agent
             astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'])
-            path = astar.find_paths()
+            path , head_to = astar.find_paths()
             # print(f'i: {i}, path: {path[0]}')
             me_map_pos = []
+            me_head_to = []
+            print(f'this is path')
             for i in path[0]: me_map_pos.append(convert_normal_to_pos_p(i))
             print(me_map_pos)
+            print(f'this is head_to')
+            for i in head_to[0]: me_head_to.append(convert_normal_to_pos_p(i))
+            print(me_head_to)
             if path is None:
                 raise BaseException('No solutions')
             
             print("Agent ", i)
             print('PATHS: ', root['paths'])
             root['paths'].append(path[0])
+            root['head_to'].append(head_to[0])
+            
 
         # Initialize all_paths with the root paths
         all_paths = [root['paths']]
@@ -464,19 +475,31 @@ class CBSSolver(object):
         #           Ensure to create a copy of any objects that your child nodes might inherit
         print(f'open_lis_1: {self.open_list}')
         count = 0
-        while len(self.open_list) > 0:
+        while len(self.open_list) > 0 :
             # if self.num_of_generated > 50000:
             #     print('reached maximum number of nodes. Returning...')
             #     return None
             count+=1
-            print(f'count: {count}')
-            # print("Open list: ", self.open_list)
+            # if count == 5: break
+            print(f'count: {count} *******')
+            print("Open list: ", self.open_list)
             p = self.pop_node()
             print(f'P IS:: {p}')
             if p['collisions'] == []:
                 print(f'YOYO EMPTY...')
+                # print(f'head_to final: {p["head_to"]}')
                 #*******************************************************************************************************
                 mypos = {
+                    'agent_0': [],
+                    'agent_1': [],
+                    'agent_2': [],
+                    'agent_3': [],
+                    'agent_4': [],
+                    'agent_5': [],
+                    'agent_6': [],
+                    'agent_7': [],
+                }
+                myhe = {
                     'agent_0': [],
                     'agent_1': [],
                     'agent_2': [],
@@ -489,15 +512,22 @@ class CBSSolver(object):
                 self.print_results(p)
                 # print(len(p["paths"]))
                 # print(f'p_paths: {p["paths"]}')
+                print(f'len path: {len(p["paths"])}')
                 for pa in range(len(p["paths"])):
                     # print(pa)
                     for i in p["paths"][pa]:
                         mypos[f"agent_{pa}"].append(convert_normal_to_pos_p(i))
                         # print(pa)
+                print(f'len head: {len(p["head_to"])}')
+                for he in range(len(p["head_to"])):
+                    for i in p["head_to"][he]:
+                        myhe[f"agent_{he}"].append(convert_normal_to_pos_p(i))
+                
                 for i in mypos:
-                    print(i, mypos[i])
+                    print(f'{i}, {mypos[i]}, {myhe[i]}')
                 # number of nodes generated/expanded for comparing implementations
-                return p['paths'], self.num_of_generated, self.num_of_expanded
+                print(f'this is P[head_to]: {p["head_to"]}')
+                return p['paths'], self.num_of_generated, self.num_of_expanded, p['head_to']
             collision = p['collisions'].pop(0)
             print(f'collision pop0: {collision}')
             # constraints = standard_splitting(collision)
@@ -523,18 +553,22 @@ class CBSSolver(object):
                 q = {'cost': 0,
                      'constraints': [constraint],
                      'paths': [],
-                     'collisions': []
+                     'collisions': [],
+                     'head_to': []
                      }
                 for c in p['constraints']:
                     if c not in q['constraints']:
                         q['constraints'].append(c)
                 for pa in p['paths']:
                     q['paths'].append(pa)
+                for he in p['head_to']:
+                    q['head_to'].append(he)
 
                 ai = constraint['agent']
                 astar = AStar(self.my_map, self.starts, self.goals,
                               self.heuristics, ai, q['constraints'])
-                path = astar.find_paths()
+                path, head_to = astar.find_paths()
+                print(f'head_to in cbs: {head_to}')
 
                 if path is not None:
                     q['paths'][ai] = path[0]
@@ -553,14 +587,232 @@ class CBSSolver(object):
                         for v in vol:
                             astar_v = AStar(
                                 self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'])
-                            path_v = astar_v.find_paths()
+                            path_v, head_to_v = astar_v.find_paths()
+                            print(f'path_vvvv: {path_v}')
+                            print(f'head_vvvv: {head_to_v}')
+                            
                             if path_v is None:
                                 continue_flag = True
                             else:
                                 q['paths'][v] = path_v[0]
+                                print(f'qqqqq_path:{q["paths"][v]}')
+                                # q['head_to'][v] = head_to_v[0]
+                                # print(f'qqqqq_head:{q["head_to"][v]}')
+
                         if continue_flag:
                             continue
-                    print(f'q[paths][{ai}]: {q["paths"][ai]}')
+                    print(f'q[paths][{ai}]: {q["paths"]}')
+                    print(f'q[head_to][{ai}]: {q["head_to"]}')
+                    # bb = q['collisions']
+                    print(f'q[collis] before: {q["collisions"]}')
+                    
+                    q['collisions'] = detect_collisions(q['paths'])
+                    # ba = q['collisions']
+                    
+                    print(f'q[collis] after: {q["collisions"]}')
+
+                    q['cost'] = get_sum_of_cost(q['paths'])
+                    self.push_node(q)
+        return None
+    
+    def find_solution_2(self, disjoint, initial_paths):
+        """ Finds paths for all agents from their start locations to their goal locations
+
+        disjoint         - use disjoint splitting or not
+        """
+
+        self.start_time = timer.time()
+
+        if disjoint:
+            splitter = disjoint_splitting
+        else:
+            splitter = standard_splitting
+
+        print("USING: ", splitter)
+
+        AStar = A_Star
+
+        # Generate the root node
+        # constraints   - list of constraints
+        # paths         - list of paths, one for each agent
+        #               [[(x11, y11), (x12, y12), ...], [(x21, y21), (x22, y22), ...], ...]
+        # collisions     - list of collisions in paths
+        root = {'cost': 0,
+                'constraints': [],
+                'paths': [],
+                'collisions': [],
+                'head_to': []}
+
+        for i in range(self.num_of_agents):  # Find initial path for each agent
+            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'])
+            path , head_to = astar.find_paths()
+            # print(f'i: {i}, path: {path[0]}')
+            me_map_pos = []
+            me_head_to = []
+            print(f'this is path')
+            for i in path[0]: me_map_pos.append(convert_normal_to_pos_p(i))
+            print(me_map_pos)
+            print(f'this is head_to')
+            for i in head_to[0]: me_head_to.append(convert_normal_to_pos_p(i))
+            print(me_head_to)
+            if path is None:
+                raise BaseException('No solutions')
+            
+            print("Agent ", i)
+            print('PATHS: ', root['paths'])
+            root['paths'].append(path[0])
+            root['head_to'].append(head_to[0])
+            
+
+        # Initialize all_paths with the root paths
+        all_paths = [root['paths']]
+        
+        # Visualize initial state
+        # astar_step(self.my_map, self.starts, self.goals, self.heuristics, root['paths'], root['constraints'], 0)
+        # each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, root['constraints'], 0)
+        
+        root['cost'] = get_sum_of_cost(root['paths'])
+        root['collisions'] = detect_collisions(root['paths'])
+        self.push_node(root)
+
+        ##############################
+        # Task 3.3: High-Level Search
+        #           Repeat the following as long as the open list is not empty:
+        #             1. Get the next node from the open list (you can use self.pop_node()
+        #             2. If this node has no collision, return solution
+        #             3. Otherwise, choose the first collision and convert to a list of constraints (using your
+        #                standard_splitting function). Add a new child node to your open list for each constraint
+        #           Ensure to create a copy of any objects that your child nodes might inherit
+        print(f'open_lis_1: {self.open_list}')
+        count = 0
+        while len(self.open_list) > 0 :
+            # if self.num_of_generated > 50000:
+            #     print('reached maximum number of nodes. Returning...')
+            #     return None
+            count+=1
+            # if count == 5: break
+            print(f'count: {count} *******')
+            print("Open list: ", self.open_list)
+            p = self.pop_node()
+            print(f'P IS:: {p}')
+            if p['collisions'] == []:
+                print(f'YOYO EMPTY...')
+                # print(f'head_to final: {p["head_to"]}')
+                #*******************************************************************************************************
+                mypos = {
+                    'agent_0': [],
+                    'agent_1': [],
+                    'agent_2': [],
+                    'agent_3': [],
+                    'agent_4': [],
+                    'agent_5': [],
+                    'agent_6': [],
+                    'agent_7': [],
+                }
+                myhe = {
+                    'agent_0': [],
+                    'agent_1': [],
+                    'agent_2': [],
+                    'agent_3': [],
+                    'agent_4': [],
+                    'agent_5': [],
+                    'agent_6': [],
+                    'agent_7': [],
+                }
+                self.print_results(p)
+                # print(len(p["paths"]))
+                # print(f'p_paths: {p["paths"]}')
+                print(f'len path: {len(p["paths"])}')
+                for pa in range(len(p["paths"])):
+                    # print(pa)
+                    for i in p["paths"][pa]:
+                        mypos[f"agent_{pa}"].append(convert_normal_to_pos_p(i))
+                        # print(pa)
+                print(f'len head: {len(p["head_to"])}')
+                for he in range(len(p["head_to"])):
+                    for i in p["head_to"][he]:
+                        myhe[f"agent_{he}"].append(convert_normal_to_pos_p(i))
+                
+                for i in mypos:
+                    print(f'{i}, {mypos[i]}, {myhe[i]}')
+                # number of nodes generated/expanded for comparing implementations
+                print(f'this is P[head_to]: {p["head_to"]}')
+                return p['paths'], self.num_of_generated, self.num_of_expanded, p['head_to']
+            collision = p['collisions'].pop(0)
+            print(f'collision pop0: {collision}')
+            # constraints = standard_splitting(collision)
+            # constraints = disjoint_splitting(collision)
+            constraints = splitter(collision)
+            print(f'constraints after spl: {constraints}')
+                #*******************************************************************************************************
+            
+            ############################################################################################################
+            # Visualize final solution
+                # max_path_length = max(len(path) for path in p['paths'])
+                # for step in range(max_path_length):
+                #     astar_step(self.my_map, self.starts, self.goals, self.heuristics, p['paths'], p['constraints'], step)
+                #     each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, p['constraints'], step)
+                # return p['paths'], self.num_of_generated, self.num_of_expanded
+            ############################################################################################################
+
+            # collision = p['collisions'].pop(0) 
+            # constraints = splitter(collision)
+
+
+            for constraint in constraints:
+                q = {'cost': 0,
+                    'constraints': [constraint],
+                    'paths': [],
+                    'collisions': [],
+                    'head_to': []
+                    }
+                for c in p['constraints']:
+                    if c not in q['constraints']:
+                        q['constraints'].append(c)
+                for pa in p['paths']:
+                    q['paths'].append(pa)
+                for he in p['head_to']:
+                    q['head_to'].append(he)
+
+                ai = constraint['agent']
+                astar = AStar(self.my_map, self.starts, self.goals,
+                            self.heuristics, ai, q['constraints'])
+                path, head_to = astar.find_paths()
+                print(f'head_to in cbs: {head_to}')
+
+                if path is not None:
+                    q['paths'][ai] = path[0]
+                    a = q['paths'][ai]
+                    
+                    # Visualize each step of the new solution
+                    # max_path_length = max(len(path) for path in q['paths'])
+                    # for step in range(max_path_length):
+                    #     astar_step(self.my_map, self.starts, self.goals, self.heuristics, q['paths'], q['constraints'], step)
+                    #     each_astar_step(self.my_map, self.starts, self.goals, self.heuristics, all_paths, q['constraints'], step)
+                        
+                    # task 4
+                    continue_flag = False
+                    if constraint['positive']:
+                        vol = paths_violate_constraint(constraint, q['paths'])
+                        for v in vol:
+                            astar_v = AStar(
+                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'])
+                            path_v, head_to_v = astar_v.find_paths()
+                            print(f'path_vvvv: {path_v}')
+                            print(f'head_vvvv: {head_to_v}')
+                            
+                            if path_v is None:
+                                continue_flag = True
+                            else:
+                                q['paths'][v] = path_v[0]
+                                print(f'qqqqq_path:{q["paths"][v]}')
+                                # q['head_to'][v] = head_to_v[0]
+                                # print(f'qqqqq_head:{q["head_to"][v]}')
+
+                        if continue_flag:
+                            continue
+                    print(f'q[paths][{ai}]: {q["paths"]}')
+                    print(f'q[head_to][{ai}]: {q["head_to"]}')
                     # bb = q['collisions']
                     print(f'q[collis] before: {q["collisions"]}')
                     

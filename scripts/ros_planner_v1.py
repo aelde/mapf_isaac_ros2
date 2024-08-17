@@ -44,6 +44,9 @@ class RosPathPlanner(Node):
         
         self.sub_task = self.create_subscription(TbTask, 'all_tb_job_task', self.sub_tb_job_callback, 10)
         self.pub_path_goal = self.create_publisher(TbPathtoGoal, 'TbPathtoGoal_top', 10)
+        self.pub_head_too = self.create_publisher(TbPathtoGoal, 'Tb_head_to',10)
+        
+        
         self.sub_tb_pos = self.create_subscription(Tbpose2D, 'tb_pose2d', self.sub_tbs_pos_cb, 10)
         self.sub_tb_is_moving = self.create_subscription(Int32MultiArray, 'robot_is_moving', self.sub_is_moving,10)
         
@@ -106,6 +109,20 @@ class RosPathPlanner(Node):
             msg_path.tb_id = tb_id
             msg_path.listofpath = msg
             self.pub_path_goal.publish(msg_path)
+
+    def pub_head_to(self, tb_ids, paths):
+        for tb_id, path in zip(tb_ids, paths):
+            msg = Float32MultiArray()
+            msg_path = TbPathtoGoal()
+            msg.data = [coord for point in path for coord in point]
+            
+            dim0 = MultiArrayDimension(label="points", size=len(path), stride=len(msg.data))
+            dim1 = MultiArrayDimension(label="coordinates", size=3, stride=3)
+            msg.layout.dim = [dim0, dim1]
+
+            msg_path.tb_id = tb_id
+            msg_path.listofpath = msg
+            self.pub_head_too.publish(msg_path)
 
     def sub_tb_job_callback(self, msg):
         if (msg.tb_id not in range(1,TOTAL_ROBOTS+1)) and (msg.tb_id != -1):
@@ -198,17 +215,23 @@ class RosPathPlanner(Node):
         print()
         
         solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
-        paths, nodes_gen, nodes_exp = solution[:3]
+        paths, nodes_gen, nodes_exp , head_to = solution[:4]
+        print(f'head to _FIRST: {head_to}')
         all_paths = paths # 0 - n
         all_paths_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in paths] 
+        all_head_to = head_to
+        all_head_to_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in head_to] 
+
         print(f'All paths: ')
         for i in all_paths[0]: print(i)
         # print(all_paths)
         print()
         print(f'All paths converted: ')
         # print(all_paths_conv)
-        for i in all_paths_conv[0]: print(i)
+        for i in all_paths_conv: print(i)
         print()
+        print(f'All head_to converted: ')
+        for i in all_head_to_conv: print(i)
         
         # visualize each path
         for i, path in enumerate(all_paths_conv):
@@ -218,7 +241,7 @@ class RosPathPlanner(Node):
         Visualizer.visualize_all_paths_2(OBSTACLES_MAP, all_paths_conv, starts, goals,MAP_NAME)
         
         # visualize animate
-        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths, all_head_to)
         
         if all_paths_conv:
             print(f'All paths: ')
@@ -230,16 +253,26 @@ class RosPathPlanner(Node):
             sorted_tb_id = [tasks[i][0] for i in sorted_indices]
             
             # now all_paths_conv is 2d array , must convert to 3d array
+            
             all_paths_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_paths_conv]
+            
+            all_head_to_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_head_to_conv]
+            
+            print(f'path_to')
             for i, path in enumerate(all_paths_conv_3d):
                 print(f'TB_{tasks[i][0]}: {path}')
             
+            print(f'head_to')
+            for i, path in enumerate(all_head_to_conv_3d):
+                print(f'TB_{tasks[i][0]}: {path}')
+            
             self.pub_tb_path(sorted_tb_id, all_paths_conv_3d)
+            self.pub_head_to(sorted_tb_id, all_head_to_conv_3d)
             # self.pub_tb_path(sorted_tb_id, sorted_paths)
         else:
             print("No valid paths found for any robots")
             
-        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths)
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths,all_head_to)
         
         self.tb_queue_job_task = []
 

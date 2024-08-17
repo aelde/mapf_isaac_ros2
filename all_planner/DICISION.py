@@ -2,6 +2,15 @@ import os
 import yaml
 from ex_convert import convert_normal_to_pos_w,convert_normal_to_pos_p,convert_pos_to_normal_w,convert_pos_to_normal_p
 from map._map import obstacles_w,obstacles_p
+import visualize
+import visualize_old
+
+import a_star_class
+
+# ANI_VISUAL = visualize
+ANI_VISUAL = visualize_old
+
+# ASTAR_IS = a_star_class
 
 WS_DIR = f'/home/eggs/humble_mapf/src/mapf_isaac'
 M_PEN =  'isaac_pendora.py'
