@@ -4,6 +4,7 @@ import numpy as np
 from DICISION import ANI_VISUAL
 D_HISOVLER = 'CBS'
 D_LOWSOLVER = 'Astar'
+import cbs_basic_old
 class PlannerControl:
     def __init__(self,HISOVLER=D_HISOVLER,LOWSOLVER=D_LOWSOLVER):
         self.HISOVLER = HISOVLER
@@ -17,6 +18,15 @@ class PlannerControl:
         cbs = cbs_basic.CBSSolver(map,start_pos,goal_pos)
         solution = cbs.find_solution(False)
         paths, nodes_gen, nodes_exp, head_to = solution[:4]
+        # PlannerControl.print_solution(solution)
+        # PlannerControl.show_animation(map, start_pos, goal_pos, paths)
+        return solution
+    
+    @staticmethod
+    def plan_paths_old(map,start_pos,goal_pos):
+        cbs = cbs_basic_old.CBSSolver(map,start_pos,goal_pos)
+        solution = cbs.find_solution(False)
+        paths, nodes_gen, nodes_exp = solution[:3]
         # PlannerControl.print_solution(solution)
         # PlannerControl.show_animation(map, start_pos, goal_pos, paths)
         return solution
