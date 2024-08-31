@@ -13,7 +13,7 @@ install [ros-humble](https://docs.ros.org/en/humble/Installation.html) because t
 each np.array map refferent each node in isaac sim(pic below)  
 <img src="/z_img_readme/image.png" alt="drawing" width="600"/>  
 
-to create your custom map create new np.array of node in isaac variable in **/mapf_isaac/_map.py** then use **_map_generate.py** and **_rotate_map.py** to make map like this(use in cbs)
+to create your custom map create new np.array of node in isaac variable in **/mapf_isaac/_map.py** then use **_map_generate.py** and **_rotate_map.py** to make map like this(use in cbs)  
 <img src="/z_img_readme/img2.png" alt="drawing" width="200"/>  
 
 ```python
