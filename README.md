@@ -43,10 +43,10 @@ goal_point:
 x: 4.5
 y: -46.5
 z: 0.0"
-```
-            **start_routing** : **true** is start planner(if want to plan for multi robot sent false and the last robot sent true)  
-            **tb_id** : if a specific robot id is given, the system will use that robot. If the ID is -1, it will ignore the robot id and choose the robot closest to the specified position  
-            **goal_point** : x,y,z
+```  
+**start_routing** : **true** is start planner(if want to plan for multi robot sent false and the last robot sent true)  
+**tb_id** : if a specific robot id is given, the system will use that robot. If the ID is -1, it will ignore the robot id and choose the robot closest to the specified position  
+**goal_point** : x,y,z
 
 Please make sure to update tests as appropriate.
 
