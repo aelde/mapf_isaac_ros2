@@ -29,13 +29,13 @@ can use up to 10 robots(can custom robot start position in yaml)
 ## Run Project
 
 if want to run this pj(ros+isaac) following this step  
-    - open 4 teminals
-        - teminal 1: **ros2 run mapf_isaac ros_run_isaacsim.py**(for open isaac)  
-        - teminal 2: **ros2 run mapf_isaac ros_tbJob_service_server.py**(for run service)  
-        - teminal 3: **ros2 run mapf_isaac ros_planner_v1.py.py**(for run path planner node)  
-        - teminal 4: cd **/mapf_isaac/scripts** and run **python ros_pathfol_robot_state.py**(for run path follower node)  
-    - and next must sent service call to assign goal of each robots
-        - service msg structure like this 
+- open 4 teminals
+    - teminal 1: **ros2 run mapf_isaac ros_run_isaacsim.py**(for open isaac)  
+    - teminal 2: **ros2 run mapf_isaac ros_tbJob_service_server.py**(for run service)  
+    - teminal 3: **ros2 run mapf_isaac ros_planner_v1.py.py**(for run path planner node)  
+    - teminal 4: cd **/mapf_isaac/scripts** and run **python ros_pathfol_robot_state.py**(for run path follower node)  
+- and next must sent service call to assign goal of each robots
+    - service msg structure like this 
 ```bash
 ros2 service call /tb_job_srv mapf_isaac/srv/TbJob "start_routing: false
 tb_id: 1
