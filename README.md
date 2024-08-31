@@ -36,14 +36,14 @@ if want to run this pj(ros+isaac) following this step
         - teminal 4: cd **/mapf_isaac/scripts** and run **python ros_pathfol_robot_state.py**(for run path follower node)  
     - and next must sent service call to assign goal of each robots
         - service msg structure like this 
-'''bash
+```bash
 ros2 service call /tb_job_srv mapf_isaac/srv/TbJob "start_routing: false
 tb_id: 1
 goal_point:
 x: 4.5
 y: -46.5
 z: 0.0"
-'''
+```
             **start_routing** : **true** is start planner(if want to plan for multi robot sent false and the last robot sent true)  
             **tb_id** : if a specific robot id is given, the system will use that robot. If the ID is -1, it will ignore the robot id and choose the robot closest to the specified position  
             **goal_point** : x,y,z
