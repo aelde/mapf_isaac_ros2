@@ -48,8 +48,8 @@ z: 0.0"
 **tb_id** : if a specific robot id is given, the system will use that robot. If the ID is -1, it will ignore the robot id and choose the robot closest to the specified position  
 **goal_point** : x,y,z
 
-Please make sure to update tests as appropriate.
+See the result...
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[EIEI](https://choosealicense.com/licenses/mit/)
