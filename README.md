@@ -11,7 +11,7 @@ install [ros-humble](https://docs.ros.org/en/humble/Installation.html) because t
 ## Usage
 **all maps** can be found in **/mapf_isaac/_map.py(np.array map)**  
 each np.array map refferent each node in isaac sim(pic below)  
-![alt text](z_img_readme/image.png)
+<img src="/z_img_readme/image.png" alt="drawing" width="200"/>
 these map represent each node in isaac 
 to create your custom map create new variable in **/mapf_isaac/_map.py** then use **_map_generate.py** and **_rotate_map.py** to make map like this
 ```python
