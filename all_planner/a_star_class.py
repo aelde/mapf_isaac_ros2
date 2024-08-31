@@ -28,7 +28,7 @@ def convert_normal_to_pos_p(pos):
     return (pos[0]*3 - 7.5, pos[1]*3 - 67.5)
 
 def compute_heuristics(my_map, goal):
-    # print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
+    # ##print(f'GOAL is : {goal} , {convert_normal_to_pos(goal)}')
     # Use Dijkstra to build a shortest-path tree rooted at the goal location
     open_list = []
     closed_list = dict()
@@ -39,10 +39,10 @@ def compute_heuristics(my_map, goal):
     count = 0
     while len(open_list) > 0:
         count += 1
-        # print(f'count: {count}')
-        # print(f'o_ {count-1}, {open_list}')
+        # ##print(f'count: {count}')
+        # ##print(f'o_ {count-1}, {open_list}')
         (cost, loc, curr) = heapq.heappop(open_list)
-        # for i,j in enumerate(open_list): print(f'o_ {i}, {j}')
+        # for i,j in enumerate(open_list): ##print(f'o_ {i}, {j}')
         for dir in range(4):
             child_loc = move(loc, dir)
             child_cost = cost + 1
@@ -61,11 +61,11 @@ def compute_heuristics(my_map, goal):
                 closed_list[child_loc] = child
                 heapq.heappush(open_list, (child_cost, child_loc, child))
 
-    # print(f'len open is : {len(open_list)}')
-    # print(f'len close is : {len(closed_list)}')
-    # print(f'close: of {goal} , {convert_normal_to_pos(goal)}')
+    # ##print(f'len open is : {len(open_list)}')
+    # ##print(f'len close is : {len(closed_list)}')
+    # ##print(f'close: of {goal} , {convert_normal_to_pos(goal)}')
     # for i,j in enumerate(closed_list.items()): 
-        # print(f'c_ {i}, {j}')
+        # ##print(f'c_ {i}, {j}')
     
     # build the heuristics table
     h_values = dict()
@@ -95,13 +95,13 @@ def get_path(goal_node,meta_agent):
         path[i].reverse()
         assert path[i] is not None
 
-        print(f'get_path: {path[i]}')
+        ##print(f'get_path: {path[i]}')
 
         if len(path[i]) > 1: 
             # remove trailing duplicates
             while path[i][-1] == path[i][-2]:
                 path[i].pop()
-                print(path[i])
+                ##print(path[i])
                 if len(path[i]) <= 1:
                     break
             # assert path[i][-1] != path[i][-2] # no repeats at the end!!
@@ -130,10 +130,10 @@ class A_Star(object):
         self.closed_list = dict()
 
         self.g_cost = g_cost
-        # print(f'G_COST: {g_cost}')
-        # print(f'str_g: {g_cost["straight"]}')
-        # print(f'le_g: {g_cost["rotate_left"]}')
-        # print(f'ri_g: {g_cost["rotate_right"]}')
+        # ##print(f'G_COST: {g_cost}')
+        # ##print(f'str_g: {g_cost["straight"]}')
+        # ##print(f'le_g: {g_cost["rotate_left"]}')
+        # ##print(f'ri_g: {g_cost["rotate_right"]}')
         
         self.constraints = contraints # to be used to create c_table
 
@@ -142,7 +142,7 @@ class A_Star(object):
         # check if meta_agent is only a simple agent (from basic CBS)
         if not isinstance(agents, list):
             self.agents = [agents]
-            # print(meta_agent)
+            # ##print(meta_agent)
 
             # add meta_agent keys to constraints
             for c in self.constraints:
@@ -158,18 +158,18 @@ class A_Star(object):
 
 
     def push_node(self, node):
-        # print('hey push_node...')
+        # ##print('hey push_node...')
         f_value = node['g_val'] + node['h_val']
-        # print(f'f: {f_value}')
+        # ##print(f'f: {f_value}')
         heapq.heappush(self.open_list, (f_value, node['h_val'], node['loc'], self.num_generated, node))
         self.num_generated += 1
-        # print(f'num_gen: {self.num_generated}')
+        # ##print(f'num_gen: {self.num_generated}')
         
     def pop_node(self):
         _,_,_, id, curr = heapq.heappop(self.open_list)
 
         self.num_expanded += 1
-        # print(f'num_expan: {self.num_expanded}')
+        # ##print(f'num_expan: {self.num_expanded}')
         return curr
 
     # return a table that constains the list of constraints of all agents for each time step. 
@@ -214,7 +214,7 @@ class A_Star(object):
     # returns if a move at timestep violates a "positive" or a "negative" constraint in c_table
     def constraint_violated(self, curr_loc, next_loc, timestep, c_table_agent, agent):
 
-        # print("the move : {}, {}".format(curr_loc, next_loc))
+        # ##print("the move : {}, {}".format(curr_loc, next_loc))
 
 
         if timestep not in c_table_agent:
@@ -227,19 +227,19 @@ class A_Star(object):
                 if len(constraint['loc']) == 1:
                     # positive constraint
                     if constraint['positive'] and next_loc != constraint['loc'][0]:
-                        # print("time {} positive constraint : {}".format(timestep, constraint))
+                        # ##print("time {} positive constraint : {}".format(timestep, constraint))
                         return constraint
                     # negative constraint
                     elif not constraint['positive'] and next_loc == constraint['loc'][0]:
-                        # print("time {} negative constraint : {}".format(timestep, constraint))
+                        # ##print("time {} negative constraint : {}".format(timestep, constraint))
                         return constraint
                 # edge constraint
                 else:
                     if constraint['positive'] and constraint['loc'] != [curr_loc, next_loc]:
-                        # print("time {} positive constraint : {}".format(timestep, constraint))
+                        # ##print("time {} positive constraint : {}".format(timestep, constraint))
                         return constraint
                     if not constraint['positive'] and constraint['loc'] == [curr_loc, next_loc]:
-                        # print("time {} negative constraint : {}".format(timestep, constraint))
+                        # ##print("time {} negative constraint : {}".format(timestep, constraint))
                         return constraint
 
         return None
@@ -258,12 +258,12 @@ class A_Star(object):
                     if len(constraint['loc']) == 1:
                         # positive constraint
                         if constraint['positive'] and curr_loc != constraint['loc'][0]:
-                            # print("future time {} positive constraint : {}".format(t, constraint))
+                            # ##print("future time {} positive constraint : {}".format(t, constraint))
                             return True
                         # negative constraint
                         elif not constraint['positive'] and curr_loc == constraint['loc'][0]:
-                            # print("time {} negative constraint : {}".format(timestep, constraint))
-                            # print("future time {} negative constraint : {}".format(t, constraint))
+                            # ##print("time {} negative constraint : {}".format(timestep, constraint))
+                            # ##print("future time {} negative constraint : {}".format(t, constraint))
                             return True
 
 
@@ -276,7 +276,7 @@ class A_Star(object):
         ma_dirs = product(list(range(5)), repeat=len(self.agents)) # directions for move() for each agent: 0, 1, 2, 3, 4
         
         for dirs in ma_dirs: 
-            # print(dirs)
+            # ##print(dirs)
             invalid_move = False
             child_loc = []
             # move each agent for new timestep & check for (internal) conflicts with each other
@@ -285,7 +285,7 @@ class A_Star(object):
                     # vertex collision; check for duplicates in child_loc
                     if aloc in child_loc:
                         invalid_move = True
-                        # print("internal conflict")
+                        # ##print("internal conflict")
                         break
                     child_loc.append(move(curr['loc'][i], dirs[i]))   
 
@@ -298,7 +298,7 @@ class A_Star(object):
                 # edge collision: check for matching locs in curr_loc and child_loc between two agents
                 for j, a in enumerate(self.agents):   
                     if i != j:
-                        # print(ai, aj)
+                        # ##print(ai, aj)
                         if child_loc[i] == curr['loc'][j] and child_loc[j] == curr['loc'][i]:
                             invalid_move = True             
             
@@ -334,7 +334,7 @@ class A_Star(object):
 
             # g_value = curr['g_val']+ curr['reached_goal'].count(False)
             num_moves = curr['reached_goal'].count(False)
-            # print("(edge) cost (curr -> child) in a* tree == ", num_moves)
+            # ##print("(edge) cost (curr -> child) in a* tree == ", num_moves)
             
             
             '''*************** new g cost cal ***************'''
@@ -345,7 +345,7 @@ class A_Star(object):
                 # parent_locc = None  # or some default value
             curr_locc = np.array(curr['loc'][0])
             child_locc = np.array(child_loc[0])
-            # print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
+            # ##print(f'family-> parent: {parent_locc}, curr: {curr_locc}, child: {child_locc}')
             
             direc = curr_locc - parent_locc
             new_direction_str = np.array(child_loc) - np.array(curr_locc)
@@ -353,9 +353,9 @@ class A_Star(object):
             needs_rotation = not np.array_equal(direc, new_direction_str) and not np.array_equal(direc, np.zeros(2))
             cross_product = np.cross(direc, new_direction_str)
             
-            # print(f'str_g: {g_cost["straight"]}')
-            # print(f'le_g: {g_cost["rotate_left"]}')
-            # print(f'ri_g: {g_cost["rotate_right"]}')
+            # ##print(f'str_g: {g_cost["straight"]}')
+            # ##print(f'le_g: {g_cost["rotate_left"]}')
+            # ##print(f'ri_g: {g_cost["rotate_right"]}')
             
             straight_cost = self.g_cost["straight"]
             rotate_left_cost = self.g_cost["rotate_left"]
@@ -365,17 +365,17 @@ class A_Star(object):
             
             if cross_product == 0:
                 pass
-                # print(f'same loc or parent loc, no need rot! use: {straight_cost}')
+                # ##print(f'same loc or parent loc, no need rot! use: {straight_cost}')
                 custom_g_cost = straight_cost
                 # continue
             elif needs_rotation:			
-                # print(f'cross_product: {cross_product}')
+                # ##print(f'cross_product: {cross_product}')
                 rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
                 custom_g_cost = rotation_cost
-                # print(f"need rotation! use: {rotation_cost}")
+                # ##print(f"need rotation! use: {rotation_cost}")
             else : 
                 pass
-                # print(f"no need rotation! use: {straight_cost}")
+                # ##print(f"no need rotation! use: {straight_cost}")
                 custom_g_cost = straight_cost
                 # continue
             
@@ -384,7 +384,7 @@ class A_Star(object):
             g_value = curr['g_val'] + custom_g_cost
             '''***************"***************"***************'''
 
-            # print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
+            # ##print(f'h: {h_value}, g: {g_value}, num_mov:{num_moves}, loc: {child_loc}, {convert_normal_to_pos_p(child_loc[0])}')
 
             reached_goal = [False for i in range(len(self.agents))]
 
@@ -394,7 +394,7 @@ class A_Star(object):
 
                     if curr['timestep']+1 <= self.max_constraints[i]:
                         if not self.future_constraint_violated(child_loc[i], curr['timestep']+1, self.max_constraints[i] ,self.c_table[i], self.agents[i]):
-                    # print("agent ", a, 'has found solution at timestep ', curr['timestep'] + 1)
+                    # ##print("agent ", a, 'has found solution at timestep ', curr['timestep'] + 1)
                     # print ('MAX CONSTRIANT:', self.max_constraints[i])
                             reached_goal[i] = True
                             # self.max_constraints[i] differs for each node
@@ -412,14 +412,14 @@ class A_Star(object):
 
             children.append(child)
 
-            # print(f'children: \n{children}')
+            # ##print(f'children: \n{children}')
         return children
 
     def compare_nodes(self, n1, n2):
         """Return true is n1 is better than n2."""
 
-        # print(n1['g_val'] + n1['h_val'])
-        # print(n2['g_val'] + n2['h_val'])
+        # ##print(n1['g_val'] + n1['h_val'])
+        # ##print(n2['g_val'] + n2['h_val'])
 
         assert isinstance(n1['g_val'] + n1['h_val'], int)
         assert isinstance(n2['g_val'] + n2['h_val'], int)
@@ -430,22 +430,22 @@ class A_Star(object):
 
         self.start_time = timer.time()
 
-        # print(f'SELF.AGENTS: {self.agents}, {self.starts[0]}, {convert_normal_to_pos(self.starts[0])} ')
+        # ##print(f'SELF.AGENTS: {self.agents}, {self.starts[0]}, {convert_normal_to_pos(self.starts[0])} ')
 
-        print("> build constraint table")
+        ##print("> build constraint table")
         
 
         for i, a in enumerate(self.agents):
             table_i = self.build_constraint_table(a)
-            print(f'table_i: {table_i}')
+            ##print(f'table_i: {table_i}')
             self.c_table.append(table_i)
             if table_i.keys():
                 self.max_constraints[i] = max(table_i.keys())
-        print(f'c_table: {self.c_table}')
-        print(f'max_cont: {self.max_constraints[i]}')
+        ##print(f'c_table: {self.c_table}')
+        ##print(f'max_cont: {self.max_constraints[i]}')
 
         h_value = sum([self.heuristics[i][self.starts[i]] for i in range(len(self.agents))])
-        # print(f'h_value: {h_value}')
+        # ##print(f'h_value: {h_value}')
         
         # assert h_value == h_test
 
@@ -461,10 +461,10 @@ class A_Star(object):
         # check if any any agents are already at goal loc
         for i, a in enumerate(self.agents):
             if root['loc'][i] == self.goals[i]:
-                print(f'YO in : root[loc][i] == self.goals[i]')
+                ##print(f'YO in : root[loc][i] == self.goals[i]')
                 if root['timestep'] <= self.max_constraints[i]:
                     if not self.future_constraint_violated(root['loc'][i], root['timestep'], self.max_constraints[i] ,self.c_table[i], self.agents[i]):
-                        print(f'YO in: reached_goal=True')
+                        ##print(f'YO in: reached_goal=True')
                         root['reached_goal'][i] = True
 
                         self.max_constraints[i] = 0
@@ -472,8 +472,8 @@ class A_Star(object):
 
         self.push_node(root)
         self.closed_list[(tuple(root['loc']),root['timestep'])] = [root]
-        # print(f'initial close: {self.closed_list}, len: {len(self.closed_list)}')
-        # print(f'initial open: {self.open_list}, len: {len(self.open_list)}')
+        # ##print(f'initial close: {self.closed_list}, len: {len(self.closed_list)}')
+        # ##print(f'initial open: {self.open_list}, len: {len(self.open_list)}')
         
         step_count = 0
         while len(self.open_list) > 0:
@@ -482,15 +482,15 @@ class A_Star(object):
             #     return
 
             curr = self.pop_node()
-            # print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
+            # ##print(f'pop: {curr["loc"]}, {convert_normal_to_pos_p(curr["loc"][0])}, g:{curr["g_val"]}, h:{curr["h_val"]}')
             
             solution_found = all(curr['reached_goal'][i] for i in range(len(self.agents)))
-            # print(curr['reached_goal'] )
+            # ##print(curr['reached_goal'] )
 
             if solution_found:
-                print(f'end... agent: {self.agents}')
+                ##print(f'end... agent: {self.agents}')
                 # convert_normal_to_pos()
-                # print(f'end_cuur ag_{self.agents}: \n{curr}')
+                # ##print(f'end_cuur ag_{self.agents}: \n{curr}')
                 return get_path(curr,self.agents)
                 xx
 
@@ -507,18 +507,18 @@ class A_Star(object):
                 #         self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                 #         self.push_node(child)
                 # else:
-                #     # print('bye child ',child['loc'])
+                #     # ##print('bye child ',child['loc'])
                 #     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                 #     self.push_node(child)
 
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
                     existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
                     if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                        # print("child is better than existing in closed list")
+                        # ##print("child is better than existing in closed list")
                         self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                         self.push_node(child)
                 else:
-                    # print('bye child ',child['loc'])
+                    # ##print('bye child ',child['loc'])
                     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                     self.push_node(child)
 
@@ -526,7 +526,7 @@ class A_Star(object):
                 #     # existing_node = self.closed_list[(tuple(child['loc']),child['timestep'])]
                 #     # if compare_nodes(child, existing_node):
                 #     self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                #     # print('bye child ',child['loc'])
+                #     # ##print('bye child ',child['loc'])
                 #     self.push_node(child)
 
             # if (tuple(curr['loc']),curr['timestep']) not in self.closed_list:
@@ -534,14 +534,14 @@ class A_Star(object):
             
             # self.visualize_each_step(curr, self.my_map, self.heuristics[0] ,children, step_count)
             step_count += 1
-        print('no solution')
+        ##print('no solution')
 
-        # print("\nEND OF A*\n") # comment out if needed
+        # ##print("\nEND OF A*\n") # comment out if needed
         return None        
 
     def visualize_each_step(self, curr, my_map, h_cost, children, step_count):
         
-        # print(f'close_list vi: {self.closed_list}')
+        # ##print(f'close_list vi: {self.closed_list}')
         n_x, n_y = len(my_map), len(my_map[0])
         
         fig, ax = plt.subplots(figsize=(n_y, n_x))
@@ -593,7 +593,7 @@ class A_Star(object):
                     f_str = ','.join(map(str, sorted(f_values)))
                     
                     if len(sorted(g_values)) > 0:
-                        # print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
+                        # ##print(f'x_y: {x},{y} :: g: {g_values}, f: {f_values}')
                         g_str = str(sorted(g_values)[0])
                         f_str = str(sorted(f_values)[0])
                         g_str = str(round(float(g_str),2))

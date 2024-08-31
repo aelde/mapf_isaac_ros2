@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from all_planner.ex_planner_control import PlannerControl
 from all_planner.ex_me_visualizer import Visualizer
 from all_planner.DICISION import CONV_NORMAL_TO_POS,CONV_POS_TO_NORMAL,WS_DIR,MAP_NAME,TOTAL_ROBOTS,OBSTACLES_MAP
+from all_planner.Robot_State_Check_Extension import Robot_State_Check
 
 load_dotenv()
 
@@ -214,24 +215,45 @@ class RosPathPlanner(Node):
         print(f'Converted Goals: \n{normal_goals}')
         print()
         
-        solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
+        initial_angles = [90.0,90.0,90.0,90.0]
+        
+        # solution = PlannerControl().plan_paths(self.map, normal_start, normal_goals)
+        solution = PlannerControl().plan_paths_with_rot_state(self.map, normal_start, normal_goals,initial_angles)
         paths, nodes_gen, nodes_exp , head_to = solution[:4]
-        print(f'head to _FIRST: {head_to}')
+        print(f'head to _____________FIRST: \n{head_to}')
         all_paths = paths # 0 - n
         all_paths_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in paths] 
+        # all_paths_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in paths[i], head_to]) for i in range(len(paths))] 
         all_head_to = head_to
-        all_head_to_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in head_to] 
+        # all_head_to_conv = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in head_to] 
+        
+        # all_head_to_conv = [(i for i in path) for path in head_to]
 
+        print(f'all paths conv w/ to ROBOT state ')
+        robot_state = []
+        for i, arr in enumerate(all_paths_conv):
+            # convert the values to add to a numpy array with the correct shape
+            add_values = np.array(head_to[i]).reshape(arr.shape[0], 1)
+            
+            # concatenate the original array with the new values
+            new_arr = np.concatenate((arr, add_values), axis=1)
+            
+            robot_state.append(new_arr)
+        for arr in robot_state:
+            print(arr)
+        
+
+        
         print(f'All paths: ')
-        for i in all_paths[0]: print(i)
+        for i in all_paths: print(i)
         # print(all_paths)
-        print()
+        # print()
         print(f'All paths converted: ')
-        # print(all_paths_conv)
+        print(all_paths_conv)
         for i in all_paths_conv: print(i)
         print()
         print(f'All head_to converted: ')
-        for i in all_head_to_conv: print(i)
+        for i in all_head_to: print(i)
         
         # visualize each path
         for i, path in enumerate(all_paths_conv):
@@ -241,7 +263,58 @@ class RosPathPlanner(Node):
         Visualizer.visualize_all_paths_2(OBSTACLES_MAP, all_paths_conv, starts, goals,MAP_NAME)
         
         # visualize animate
-        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths, all_head_to)
+        rotation_checker = Robot_State_Check()  # for test
+        # robot_state_combine = rotation_checker.combine_robot_state_list(head_to,all_paths)
+        # robot_state_2 = rotation_checker.detect_add_state(robot_state_combine)
+        
+        print(f'all_path_i :{all_paths}')
+        print(f'head_to_i :{head_to}')
+        
+        robot_exten_paths = []
+        for i in range(len(all_paths)):
+            print(f'all_path_i :{all_paths[i]}')
+            print(f'head_to_i :{head_to[i]}')
+            robot_exten_paths.append(rotation_checker.combine_robot_state_list(head_to[i],all_paths[i]))
+        # angle = head_to[0]
+        # pos = paths[0]
+        print(f'robot exten \n{robot_exten_paths}')
+        # robot_exten_paths2 = []
+        # for i in range(len(robot_exten_paths)):
+        #     robot_exten_paths2.append(rotation_checker.detect_add_state(robot_exten_paths[i]))
+        # print(f'robot exten2 \n{robot_exten_paths2}')
+        
+        angle_correct = []
+        for i in robot_exten_paths: angle_correct.append(rotation_checker.make_angle_correct(i))
+        # result = rotation_checker.combine_robot_state_list(angle, pos)
+        print(f'ANGLEEE: \n{angle_correct}')
+        # result2 = rotation_checker.detect_add_state(result)
+        # print(f'RESULTTT@222: \n{result2}')
+        robot_exten_pos2 = []
+        for i in angle_correct:
+            robot_exten_pos2.append(rotation_checker.get_position_state(i))
+        print(f'POS AFTER: \n{robot_exten_pos2}')
+        robot_exten_angle2 = []
+        for i in angle_correct:
+            robot_exten_angle2.append(rotation_checker.get_angle_state(i))
+        print(f'ANGLE AFTER: \n{robot_exten_angle2}')
+        
+        all_paths_conv2 = [np.array([CONV_NORMAL_TO_POS(point) for point in path]) for path in robot_exten_pos2]
+        
+        robot_state3 = []
+        for i, arr in enumerate(all_paths_conv2):
+            # convert the values to add to a numpy array with the correct shape
+            add_values = np.array(robot_exten_angle2[i]).reshape(arr.shape[0], 1)
+            
+            # concatenate the original array with the new values
+            new_arr = np.concatenate((arr, add_values), axis=1)
+            
+            robot_state3.append(new_arr)
+        # for arr in robot_state:
+        #     print(arr)
+        
+        
+        # PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths, all_head_to)
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, robot_exten_pos2, all_head_to)
         
         if all_paths_conv:
             print(f'All paths: ')
@@ -251,29 +324,33 @@ class RosPathPlanner(Node):
             sorted_indices = sorted(range(len(tasks)), key=lambda k: tasks[k][0])
             # sorted_paths = [all_paths_conv[i] for i in sorted_indices]
             sorted_tb_id = [tasks[i][0] for i in sorted_indices]
-            
+            print(f'sorted_tb_id: {sorted_tb_id}')
             # now all_paths_conv is 2d array , must convert to 3d array
             
             all_paths_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_paths_conv]
             
-            all_head_to_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_head_to_conv]
+            # all_head_to_conv_3d = [np.hstack((arr, np.zeros((arr.shape[0], 1)))) for arr in all_head_to_conv]
             
             print(f'path_to')
             for i, path in enumerate(all_paths_conv_3d):
                 print(f'TB_{tasks[i][0]}: {path}')
             
+            print(f'all head_to is: ')
+            print(all_head_to)
             print(f'head_to')
-            for i, path in enumerate(all_head_to_conv_3d):
+            for i, path in enumerate(all_head_to):
                 print(f'TB_{tasks[i][0]}: {path}')
-            
-            self.pub_tb_path(sorted_tb_id, all_paths_conv_3d)
-            self.pub_head_to(sorted_tb_id, all_head_to_conv_3d)
+            sss = [1, 2, 3, 4]
+            # self.pub_tb_path(sorted_tb_id, all_paths_conv_3d)            
+            self.pub_tb_path(sorted_tb_id, robot_state3)
+
+            # self.pub_head_to(sorted_tb_id, all_head_to_conv_3d)
             # self.pub_tb_path(sorted_tb_id, sorted_paths)
         else:
             print("No valid paths found for any robots")
             
-        PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths,all_head_to)
-        
+        # PlannerControl.show_animation(self.map, normal_start, normal_goals, all_paths,all_head_to)
+        PlannerControl.show_animation(self.map, normal_start, normal_goals, robot_exten_pos2,all_head_to)
         self.tb_queue_job_task = []
 
 def main(args=None):

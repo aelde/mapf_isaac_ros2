@@ -2,7 +2,13 @@ import time as timer
 import heapq
 import random
 import matplotlib.pyplot as plt
-from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+from a_star_class_with_rot_state import A_Star, get_location, get_sum_of_cost, compute_heuristics
+# from REMAKE_a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+# from a_star_class import A_Star, get_location, get_sum_of_cost, compute_heuristics
+# from DICISION import A_Star, get_location, get_sum_of_cost, compute_heuristics
+
+# from DICISION import A_Star, get_location, get_sum_of_cost, compute_heuristics
+
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgba
@@ -163,8 +169,9 @@ def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
     fig, axs = plt.subplots(1, num_agents, figsize=(6*num_agents, 6), squeeze=False)
     fig.suptitle('Map Visualization with Start, Goal Positions, and Heuristics', fontsize=16)
     
-    colors = ['lime', 'deeppink', 'blue','cyan']
-    
+    # colors = ['lime', 'deeppink', 'blue','cyan']
+    colors = ['g', 'r', 'b','c','y','m','w','k']
+
     for i in range(num_agents):
         ax = axs[0, i]
         
@@ -199,7 +206,7 @@ def visualize_map_and_heuristics(my_map, starts, goals, heuristics):
         # Set labels and title
         ax.set_xlabel('Y')
         ax.set_ylabel('X')
-        ax.set_title(f'Agent {i}')
+        ax.set_title(f'Robot {i+1}')
         
         # Invert y-axis to match the coordinate system in the code
         # ax.invert_yaxis()
@@ -239,6 +246,7 @@ def detect_collisions(paths):
     #           A collision can be represented as dictionary that contains the id of the two robots, the vertex or edge
     #           causing the collision, and the timestep at which the collision occurred.
     #           You should use your detect_collision function to find a collision between two robots.
+    #print(f'SUB BRO')
     collisions = []
     for i in range(len(paths)-1):
         for j in range(i+1, len(paths)):
@@ -248,6 +256,7 @@ def detect_collisions(paths):
                                    'a2': j,
                                    'loc': position,
                                    'timestep': t+1})
+    #print(f'collis: {collisions}')
     return collisions
 
 
@@ -270,6 +279,11 @@ def standard_splitting(collision):
         constraints.append({'agent': collision['a2'],
                             'loc': collision['loc'],
                             'timestep': collision['timestep'],
+                            'positive': False
+                            })
+        constraints.append({'agent': 3,
+                            'loc': [(3,3)],
+                            'timestep': 1,
                             'positive': False
                             })
     else:
@@ -357,7 +371,7 @@ def paths_violate_constraint(constraint, paths):
 class CBSSolver(object):
     """The high-level search of CBS."""
 
-    def __init__(self, my_map, starts, goals):
+    def __init__(self, my_map, starts, goals, initial_angles):
         """my_map   - list of lists specifying obstacle positions
         starts      - [(x1, y1), (x2, y2), ...] list of start locations
         goals       - [(x1, y1), (x2, y2), ...] list of goal locations
@@ -366,6 +380,9 @@ class CBSSolver(object):
         self.my_map = my_map
         self.starts = starts
         self.goals = goals
+        
+        self.initial_angles = initial_angles
+        
         self.num_of_agents = len(goals)
 
         self.num_of_generated = 0
@@ -384,9 +401,11 @@ class CBSSolver(object):
         # visualize_map_and_heuristics(self.my_map, self.starts, self.goals, self.heuristics)
         
     def push_node(self, node):
-        heapq.heappush(self.open_list, (node['cost'], len(node['collisions']), self.num_of_generated, node))
+        # heapq.heappush(self.open_list, (node['cost'], len(
+        #     node['collisions']), self.num_of_generated, node))
+        heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
         # heapq.heappush(self.open_list, (len(node['collisions']),node['cost'], self.num_of_generated, node))
-        # #print("Generate node {}".format(self.num_of_generated))
+        #print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
     def pop_node(self):
@@ -420,21 +439,36 @@ class CBSSolver(object):
         root = {'cost': 0,
                 'constraints': [],
                 'paths': [],
-                'collisions': []}
+                'collisions': [],
+                # 'full_path': []} #head_to
+                'head_to': []
+        }
 
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'])
-            path = astar.find_paths()
+            astar = AStar(self.my_map, self.starts, self.goals, self.heuristics, i, root['constraints'],self.initial_angles)
+            path , head_to = astar.find_paths()
+            # f'CBS INITIAL PATH: \n{path} \n{head_to}'
             # #print(f'i: {i}, path: {path[0]}')
             me_map_pos = []
-            for i in path[0]: me_map_pos.append(convert_normal_to_pos_p(i))
-            #print(me_map_pos)
+            me_head_to = []
+            print(f'this is initail pathhhhh')
+            print(path[0])
+            # for i in path[0]: me_map_pos.append(convert_normal_to_pos_p(i))
+            # print(me_map_pos)
+            print(f'this is initial head_to(FULL PATH) initial angle')
+            print(head_to[0])
+            # for i in head_to[0]: me_head_to.append(convert_normal_to_pos_p(i))
+            for i in head_to[0]: me_head_to.append(i)
+
+            #print(me_head_to)
             if path is None:
                 raise BaseException('No solutions')
             
             #print("Agent ", i)
             #print('PATHS: ', root['paths'])
             root['paths'].append(path[0])
+            root['head_to'].append(head_to[0])
+            
 
         # Initialize all_paths with the root paths
         all_paths = [root['paths']]
@@ -445,7 +479,9 @@ class CBSSolver(object):
         
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
+        print(f'INITIAL COLLIS: \n{root["collisions"]}')
         self.push_node(root)
+        # return 
 
         ##############################
         # Task 3.3: High-Level Search
@@ -455,19 +491,34 @@ class CBSSolver(object):
         #             3. Otherwise, choose the first collision and convert to a list of constraints (using your
         #                standard_splitting function). Add a new child node to your open list for each constraint
         #           Ensure to create a copy of any objects that your child nodes might inherit
+        #print(f'open_lis_1: {self.open_list}')
         count = 0
-        while len(self.open_list) > 0:
+        while len(self.open_list) > 0 :
             # if self.num_of_generated > 50000:
             #     #print('reached maximum number of nodes. Returning...')
             #     return None
-            count += 1
-            #print(f'count: {count}')
+            count+=1
+            # if count == 5: break
+            print(f'count: {count} *******')
             #print("Open list: ", self.open_list)
+            print(f'OPEN is: \n{self.open_list}')
             p = self.pop_node()
-            #print(f"pop is: {p}")
+            #print(f'P IS:: {p}')
             if p['collisions'] == []:
+                #print(f'YOYO EMPTY...')
+                # #print(f'head_to final: {p["head_to"]}')
                 #*******************************************************************************************************
                 mypos = {
+                    'agent_0': [],
+                    'agent_1': [],
+                    'agent_2': [],
+                    'agent_3': [],
+                    'agent_4': [],
+                    'agent_5': [],
+                    'agent_6': [],
+                    'agent_7': [],
+                }
+                myhe = {
                     'agent_0': [],
                     'agent_1': [],
                     'agent_2': [],
@@ -480,20 +531,31 @@ class CBSSolver(object):
                 self.print_results(p)
                 # #print(len(p["paths"]))
                 # #print(f'p_paths: {p["paths"]}')
+                #print(f'len path: {len(p["paths"])}')
                 for pa in range(len(p["paths"])):
                     # #print(pa)
                     for i in p["paths"][pa]:
                         mypos[f"agent_{pa}"].append(convert_normal_to_pos_p(i))
                         # #print(pa)
+                #print(f'len head: {len(p["head_to"])}')
+                
+                # for he in range(len(p["head_to"])):
+                #     for i in p["head_to"][he]:
+                #         myhe[f"agent_{he}"].append(convert_normal_to_pos_p(i))
+                
                 for i in mypos:
-                    print()
-                    #print(i, mypos[i])
+                    pass
+                    #print(f'{i}, {mypos[i]}, {myhe[i]}')
                 # number of nodes generated/expanded for comparing implementations
-                return p['paths'], self.num_of_generated, self.num_of_expanded
+                #print(f'this is P[head_to]: {p["head_to"]}')
+                print(f'P IS: \n{p}')
+                return p['paths'], self.num_of_generated, self.num_of_expanded, p['head_to']
             collision = p['collisions'].pop(0)
+            #print(f'collision pop0: {collision}')
             # constraints = standard_splitting(collision)
             # constraints = disjoint_splitting(collision)
             constraints = splitter(collision)
+            #print(f'constraints after spl: {constraints}')
                 #*******************************************************************************************************
             
             ############################################################################################################
@@ -513,21 +575,35 @@ class CBSSolver(object):
                 q = {'cost': 0,
                      'constraints': [constraint],
                      'paths': [],
-                     'collisions': []
+                     'collisions': [],
+                     'head_to': []
                      }
                 for c in p['constraints']:
                     if c not in q['constraints']:
                         q['constraints'].append(c)
+                print(f'q_contra:{q["constraints"]}')
                 for pa in p['paths']:
                     q['paths'].append(pa)
+                for he in p['head_to']:
+                    q['head_to'].append(he)
 
                 ai = constraint['agent']
                 astar = AStar(self.my_map, self.starts, self.goals,
-                              self.heuristics, ai, q['constraints'])
-                path = astar.find_paths()
+                              self.heuristics, ai, q['constraints'],self.initial_angles)
+                path, head_to = astar.find_paths()
+                #print(f'head_to in cbs: {head_to}')
 
                 if path is not None:
+                    print(f'agent:{ai} : {constraint}')
+                    print(f'Path BEFORE \n{q["paths"][ai]}')
+                    print(f'(((((((())))))))')
+
                     q['paths'][ai] = path[0]
+                    a = q['paths'][ai]
+                    q['head_to'][ai] = head_to[0]
+                    
+                    print(f'Path AFTER \n{q["paths"][ai]}')
+                    print(f'(((((((())))))))')
                     
                      # Visualize each step of the new solution
                     # max_path_length = max(len(path) for path in q['paths'])
@@ -539,21 +615,39 @@ class CBSSolver(object):
                     continue_flag = False
                     if constraint['positive']:
                         vol = paths_violate_constraint(constraint, q['paths'])
+                        print(f'VOL is: {vol}')
                         for v in vol:
                             astar_v = AStar(
-                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'])
-                            path_v = astar_v.find_paths()
+                                self.my_map, self.starts, self.goals, self.heuristics, v, q['constraints'],self.initial_angles)
+                            path_v, head_to_v = astar_v.find_paths()
+                            #print(f'path_vvvv: {path_v}')
+                            #print(f'head_vvvv: {head_to_v}')
+                            
                             if path_v is None:
                                 continue_flag = True
                             else:
                                 q['paths'][v] = path_v[0]
+                                q['paths'][v] = head_to_v[0]
+                                #print(f'qqqqq_path:{q["paths"][v]}')
+                                # q['head_to'][v] = head_to_v[0]
+                                # #print(f'qqqqq_head:{q["head_to"][v]}')
+
                         if continue_flag:
                             continue
+                    #print(f'q[paths][{ai}]: {q["paths"]}')
+                    #print(f'q[head_to][{ai}]: {q["head_to"]}')
+                    # bb = q['collisions']
+                    #print(f'q[collis] before: {q["collisions"]}')
+                    
                     q['collisions'] = detect_collisions(q['paths'])
+                    # ba = q['collisions']
+                    
+                    print(f'q[collis] after: {q["collisions"]}')
+
                     q['cost'] = get_sum_of_cost(q['paths'])
                     self.push_node(q)
         return None
-
+    
     def print_results(self, node):
         my_pos = []
         #print("\n Found a solution! \n")

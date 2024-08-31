@@ -6,6 +6,7 @@ import copy
 import matplotlib.pyplot as plt
 import os
 from all_planner.DICISION import RESULT_DIR,DIR_COST,RESULT_DIR_STEP
+from Robot_State_Check_Extension import Robot_State_Check
     
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] #(map cordi) lelf,down,right,up,same    
@@ -102,16 +103,28 @@ def get_path(goal_node,meta_agent):
     while curr is not None:
         for i in range(len(meta_agent)):
             path[i].append(curr['loc'][i])
-            head_to[i].append(tuple(curr['head_to']))
+            # head_to[i].append(tuple(curr['head_to']))
+            head_to[i].append(curr['head_to'])
         curr = curr['parent']
     for i in range(len(meta_agent)):
         path[i].reverse()
         head_to[i].reverse()
         assert path[i] is not None
 
-        print(f'get_path: {path[i]}')
-        print(f'head_to: {head_to[i]}')
-
+        print(f'finalll get_path: \n{path}')
+        print(f'finalll head_to: \n{head_to}')
+        
+        rotation_checker = Robot_State_Check()  # for test
+        angle = head_to[0]
+        pos = path[0]
+        result = rotation_checker.combine_robot_state_list(angle, pos)
+        print(f'RESULTTT: \n{result}')
+        result2 = rotation_checker.detect_add_state(result)
+        print(f'RESULTTT@222: \n{result2}')
+        pos_state_after = [rotation_checker.get_position_state(result2)]
+        print(f'POS AFTER: \n{pos_state_after}')
+        angle_after = [rotation_checker.get_angle_state(result2)]
+        print(f'ANGLE AFTER: \n{angle_after}')
         # if len(path[i]) > 1: 
             # remove trailing duplicates
             # while path[i][-1] == path[i][-2]:
@@ -123,12 +136,14 @@ def get_path(goal_node,meta_agent):
 
     assert path is not None
     print('HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHh')
-    print(head_to)
+    # print(head_to)
     return path , head_to
+    # return pos_state_after , angle_after
+
 
 class A_Star(object):
 
-    def __init__(self,my_map,starts,goals,heuristics,agents,contraints,g_cost=DIR_COST):
+    def __init__(self,my_map,starts,goals,heuristics,agents,contraints,initial_angle,g_cost=DIR_COST):
         """my_map   - list of lists specifying obstacle positions
         starts      - [(x1, y1), (x2, y2), ...] list of start locations for CBS
         goals       - [(x1, y1), (x2, y2), ...] list of goal locations for CBS
@@ -138,7 +153,6 @@ class A_Star(object):
 
         self.my_map = my_map
 
-
         self.num_generated = 0
         self.num_expanded = 0
         self.CPU_time = 0
@@ -146,11 +160,10 @@ class A_Star(object):
         self.open_list = []
         self.closed_list = dict()
 
+        # this is g cost config
         self.g_cost = g_cost
-        # print(f'G_COST: {g_cost}')
-        # print(f'str_g: {g_cost["straight"]}')
-        # print(f'le_g: {g_cost["rotate_left"]}')
-        # print(f'ri_g: {g_cost["rotate_right"]}')
+        # this is initial angle
+        self.inital_angle = initial_angle
         
         self.constraints = contraints # to be used to create c_table
 
@@ -169,6 +182,8 @@ class A_Star(object):
         self.starts = [starts[a] for a in self.agents]
         self.heuristics = [heuristics[a] for a in self.agents]
         self.goals = [goals[a] for a in self.agents]
+        
+        # self.initial_angle = [initial_angle[a] for a in self.agents]
 
         self.c_table = [] # constraint table
         self.max_constraints = np.zeros((len(self.agents),), dtype=int)
@@ -290,7 +305,7 @@ class A_Star(object):
     def generate_child_nodes(self, curr):
         
         children = []
-        ma_dirs = product(list(range(5)), repeat=len(self.agents)) # directions for move() for each agent: 0, 1, 2, 3, 4
+        ma_dirs = product(list(range(5)), repeat=len(self.agents)) # directions for move() for each agent: 0, 1, 2, 3, 4 [lelf,down,right,up,same]
         
         for dirs in ma_dirs: 
             # print(dirs)
@@ -395,165 +410,81 @@ class A_Star(object):
             # HEAD_TO = child_loc[0]
             HEAD_TO = None
             
-            a = curr["head_to"] - child_locc
-            b = curr_locc - child_locc
-            can_move = False
-            can_backward = False
-            can_go_str = False
+            # a = curr["head_to"] - child_locc
+            # b = curr_locc - child_locc
+            # can_move = False
+            # can_backward = False
+            # can_go_str = False
+            
+            # for each agent: 0, 1, 2, 3, 4 [lelf,down,right,up,same]
             
             if dirs[0] == 4: 
             # if np.array_equal(a,np.array([0,0])) and np.array_equal(parent_locc[0]-curr_locc,np.array([0,0])): 
-                # print(f'H: dirs=4 STOP')
-                custom_g_cost = stop_cost + 10
+                print(f'H: dirs=4 STOP')
+                custom_g_cost = stop_cost
                 can_go_str = True
                 HEAD_TO = curr["head_to"]
-            elif a[0] == 2 and a[1] == 0: 
-                # print(f'H: backward_up')
-                custom_g_cost = backward_cost
-                can_backward = True
-                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
-                HEAD_TO = curr_locc
-            elif a[0] == -2 and a[1] == 0:
-                # print(f'H: backward_down')
-                custom_g_cost = backward_cost
-                can_backward = True
-                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
-                HEAD_TO = curr_locc
-            elif a[0] == 0 and a[1] == 2:
-                # print(f'H: backward_left')
-                custom_g_cost = backward_cost
-                can_backward = True
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1]
-                HEAD_TO = curr_locc
-            elif a[0] == 0 and a[1] == -2:
-                # print(f'H: backward_left')
-                custom_g_cost = backward_cost
-                can_backward = True
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])                
-                HEAD_TO = curr_locc
-            elif np.array_equal(a,np.array([-1,1])) and np.array_equal(b,np.array([-1,0])):
-                # print(f'H: rot_right_to_down')
-                custom_g_cost = rotate_right_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([1,1])) and np.array_equal(b,np.array([0,1])):
-                # print(f'H: rot_right_to_left')
-                custom_g_cost = rotate_right_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([1,-1])) and np.array_equal(b,np.array([1,0])):
-                # print(f'H: rot_right_to_up')
-                custom_g_cost = rotate_right_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([-1,-1])) and np.array_equal(b,np.array([0,-1])):
-                # print(f'H: rot_right_to_right')
-                custom_g_cost = rotate_right_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([1,1])) and np.array_equal(b,np.array([1,0])):
-                # print(f'H: rot_left_to_up')
-                custom_g_cost = rotate_left_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([-1,1])) and np.array_equal(b,np.array([0,1])):
-                # print(f'H: rot_left_to_left')
-                custom_g_cost = rotate_left_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([-1,-1])) and np.array_equal(b,np.array([-1,0])):
-                # print(f'H: rot_left_to_down')
-                custom_g_cost = rotate_left_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
-                HEAD_TO = child_locc
-            elif np.array_equal(a,np.array([1,-1])) and np.array_equal(b,np.array([0,-1])):
-                # print(f'H: rot_left_to_right')
-                custom_g_cost = rotate_left_cost
-                child_loc[0] = (curr_locc[0],curr_locc[1])
-                # HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
-                HEAD_TO = child_locc
-            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([1,0])): 
-                # print(f'H: Go_STR_to_up')
-                custom_g_cost = straight_cost
-                can_go_str = True
-                HEAD_TO = np.array([child_locc[0]-1,child_locc[1]])
-            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([0,1])): 
-                # print(f'H: Go_STR_to_left')                
-                custom_g_cost = straight_cost
-                can_go_str = True
-                HEAD_TO = np.array([child_locc[0],child_locc[1]-1])
-            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([-1,0])): 
-                # print(f'H: Go_STR_to_down')
-                custom_g_cost = straight_cost
-                can_go_str = True
-                HEAD_TO = np.array([child_locc[0]+1,child_locc[1]])
-            elif np.array_equal(curr["head_to"],child_locc) and np.array_equal(b,np.array([0,-1])): 
-                # print(f'H: Go_STR_to_right')
-                custom_g_cost = straight_cost
-                can_go_str = True
-                HEAD_TO = np.array([child_locc[0],child_locc[1]+1])
-            # elif np.array_equal(b,np.array([0,0])):
-            #     print(f'H: almost last stop')
-            #     custom_g_cost = stop_cost
-            #     can_go_str = True
-            #     HEAD_TO = curr["head_to"]
             else:
-                pass 
-                print('WTF BRO')
-            
-            # print(f'bugbug: {np.array_equal(curr["head_to"],child_locc)}, {np.array_equal(a,np.array([1,0]))}')
-            # print(f'a: {a}, {np.array([1,0])}')
-            # # a = curr["head_to"] - child_locc
-            # print(f'child: {child_locc}')
-            # print(f'curr')
-
-
-            
-            if any([can_go_str,can_backward]):
-                can_move = True
-            
-            # if np.array_equal(parent_locc, curr_locc) and np.array_equal(curr["head_to"],child_loc[0]) : 
-            #     print('H: stop')
-            #     print('stop...')
-            # elif np.array_equal(parent_locc, curr_locc) and np.array_equal(curr["head_to"],) : 
-            #     print('H: After Rotate Go STR')
-            # elif np.array_equal(parent_locc, curr_locc) and not np.array_equal(curr["head_to"],HEAD_TO) : 
-            #     print('H: need to Rotate')
-            # elif np.array_equal(curr["head_to"],child_loc[0]):
-            #     print('H: same as head_to GO STR')
-            #     print('str...')
-            #     HEAD_TO = np.array([child_loc[0][0]+0,child_loc[0][0]+1])
-            # if dirs[0] == 4:
-            #     print(f'same loc, no move, stop!!! use: {stop_cost}')
-            #     custom_g_cost = stop_cost
-            # elif np.array_equal(parent_locc, HEAD_TO):
-            #     print(f'H: going to Parent! BACKWARD!! use: {backward_cost}')
-            #     custom_g_cost = backward_cost
-            # elif cross_product == 0:
-            #     pass
-            #     print(f'parent loc,bACkward??? , no need rot! use: {straight_cost}')
-            #     custom_g_cost = straight_cost
-            #     # continue
-            # elif needs_rotation:			
-            #     # print(f'cross_product: {cross_product}')
-            #     rotation_cost = rotate_left_cost if cross_product > 0 else rotate_right_cost
-            #     custom_g_cost = rotation_cost
-            #     print(f"need rotation! , NoMove Just rOtatet use: {rotation_cost}")
-            #     child_loc[0] = (curr_locc[0],curr_locc[1])
-            # else : 
-            #     pass
-            #     print(f"STR, no need rotation! use: {straight_cost}")
-            #     custom_g_cost = straight_cost
-            #     continue
-            
-            
+                # curr loc
+                a = curr_locc
+                # child loc
+                b = child_locc
+                # cal head to angle
+                head_to_degree = np.rad2deg(np.arctan2(b[1]-a[1], b[0]-a[0]))
+                
+                if head_to_degree == -90 and head_to_degree != 0 and curr["head_to"] != 0: t_head_to_degree = 270 
+                else: t_head_to_degree = head_to_degree
+                if curr["head_to"] == -90 and head_to_degree != 0 and curr["head_to"] != 0: t_cuur_head_to = 270 
+                else: t_cuur_head_to = curr["head_to"]
+                # dif_degree = head_to_degree - curr["head_to"]
+                dif_degree = t_head_to_degree - t_cuur_head_to
+                print('+*+*+*')
+                print(f'dif: {dif_degree}, heat_to: {head_to_degree}, cur_h: {curr["head_to"]}')
+                print(f'dif: {dif_degree}, heat_to: {t_head_to_degree}, cur_h: {t_cuur_head_to}')
+                if dif_degree == 0: 
+                    print(f'dif = 0 : GO STR')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    custom_g_cost = straight_cost
+                elif dif_degree == 90:
+                    print(f'dif = 90 : ROT LEF')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    child_loc = curr['loc']
+                    custom_g_cost = rotate_left_cost
+                elif dif_degree == -90:
+                    print(f'dif = -90 : ROT RIG')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    child_loc = curr['loc']
+                    custom_g_cost = rotate_right_cost
+                elif dif_degree == 180:
+                    print(f'dif = 180 : ROT LEF X2')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    custom_g_cost = rotate_left_cost * 2
+                    # child_loc = curr['loc']
+                    # a = -(curr["head_to"])+90
+                    # HEAD_TO = a
+                elif dif_degree == -180:
+                    print(f'dif = -180 : ROT RIG X2')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    custom_g_cost = rotate_right_cost * 2
+                    # child_loc = curr['loc']
+                    # a = -(curr["head_to"])+90
+                else: 
+                    print('GGGGGGG')
+                    print(f'curr: {a}, head: {curr["head_to"]}')
+                    print(f'child: {b}')
+                    print(f'dif : {dif_degree}')
+                    print('++++++')
+                # if dif_degree == 180 or dif_degree == -180:
+                #     HEAD_TO = a
+                # else: 
+                #     HEAD_TO = head_to_degree    
+                    
+                HEAD_TO = head_to_degree        
             # g_value = curr['g_val'] + num_moves
             g_value = curr['g_val'] + custom_g_cost
             '''***************"***************"***************'''
@@ -584,7 +515,7 @@ class A_Star(object):
                     'timestep': curr['timestep']+1,
                     'reached_goal': copy.deepcopy(reached_goal),
                     'head_to': HEAD_TO,
-                    'can_move': can_move,
+                    # 'can_move': can_move,
                     } 
 
             children.append(child)
@@ -641,8 +572,10 @@ class A_Star(object):
                 # 'parent': np.array((self.starts[0][0],self.starts[0][1]-3)),
                 'timestep': 0,
                 'reached_goal': [False for i in range(len(self.agents))],
-                'head_to': np.array([self.starts[0][0],self.starts[0][1]+1]),# self.starts[0][1]+3 in my_real_world,
-                'can_move': True
+                # 'head_to': np.array([self.starts[0][0],self.starts[0][1]+1]),# self.starts[0][1]+3 in my_real_world,
+                'head_to': self.inital_angle[0],
+
+                # 'can_move': True
                 }
 
         # check if any any agents are already at goal loc
@@ -706,16 +639,16 @@ class A_Star(object):
                 # ***************************
                 if (tuple(child['loc']),child['timestep']) in self.closed_list:
                     existing = self.closed_list[(tuple(child['loc']),child['timestep'])]
-                    # if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
-                        # # print("child is better than existing in closed list")
-                        # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                        # self.push_node(child)
+                    if (child['g_val'] + child['h_val'] < existing['g_val'] + existing['h_val']) and (child['g_val'] < existing['g_val']) and child['reached_goal'].count(False) <= existing['reached_goal'].count(False):
+                        # print("child is better than existing in closed list")
+                        self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                        self.push_node(child)
                         # print('hi')
                         # print("child is better than existing in closed list")
                         # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
                         # self.push_node(child)
-                    self.closed_list[(tuple(child['loc']),child['timestep'])] = child
-                    self.push_node(child)
+                    # self.closed_list[(tuple(child['loc']),child['timestep'])] = child
+                    # self.push_node(child)
                 else:
                     # print('bye child ',child['loc'])
                     self.closed_list[(tuple(child['loc']),child['timestep'])] = child

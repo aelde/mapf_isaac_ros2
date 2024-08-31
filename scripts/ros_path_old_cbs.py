@@ -9,7 +9,31 @@ import numpy as np
 import time
 from datetime import datetime
 import os
-from all_planner.DICISION import WS_DIR, TOTAL_ROBOTS
+import sys
+import glob
+from all_planner.DICISION import CONV_NORMAL_TO_POS,CONV_POS_TO_NORMAL,WS_DIR,MAP_NAME,TOTAL_ROBOTS,OBSTACLES_MAP
+
+from all_planner.ex_planner_control import PlannerControl
+
+def import_mapf_instance(filename):
+    f = open(filename, 'r')
+    rows, columns = [int(x) for x in f.readline().split(' ')]
+    my_map = []
+    for _ in range(rows):
+        my_map.append([cell == '@' for cell in f.readline().strip()])
+    f.close()
+    return my_map 
+
+def glob_map_files():
+    config_dir = f'map/{MAP_NAME}.txt'
+    config_d = os.path.join(WS_DIR, config_dir)
+    map_files = glob.glob(config_d)
+    if map_files:
+        # print(f'Map files found: {map_files}')
+        return import_mapf_instance(map_files[0])  # Use the first file found
+    else:
+        print("No map files found!")
+        return None
 
 class PathFollowing(Node):
     def __init__(self):
@@ -27,6 +51,16 @@ class PathFollowing(Node):
         self.robot_head_to = {robot: None for robot in self.robots}
         # self.reached_goal_timestep = [{**{robot: False for robot in self.robots}, 'timestep': j} for j in range(max(len(i) for i in self.robot_path))]
         # self.robot_timestep = None
+        self.robot_goal_only = {robot: None for robot in self.robots}
+        
+        self.initial_len_path = {robot: None for robot in self.robots}
+        
+        self.can_replan = {robot: True for robot in self.robots}
+        self.curr_repeat_node = {robot: None for robot in self.robots}
+        
+        # self.can_replan['robot1'] = True
+        # self.can_replan['robot2'] = True
+
 
         # to make stop time        
         self.robot_wait_time = {robot: 0 for robot in self.robots}
@@ -36,6 +70,12 @@ class PathFollowing(Node):
         self.all_robots_completed = False
         
         self.all_robots_exec_time = []
+        
+        self.map = glob_map_files()
+        if self.map is None:
+            self.get_logger().error('No map file found. Exiting.')
+            rclpy.shutdown()
+            sys.exit(1)
         
         # Subscriptions
         self.create_subscription(Odometry, 'tb_1_green/odom', self.tb_odom_cb, 10)
@@ -77,9 +117,72 @@ class PathFollowing(Node):
                 if self.robot_goals_reached[robot]:
                     self.robot_goals_reached[robot] = False
                     self.robot_path[robot].pop(0)
+                    # self.robot_head_to[robot].pop(0)
+                    
+                    if len(self.robot_path[robot]) > 0 and len(self.robot_path[robot]) < self.initial_len_path[robot] and self.can_replan[robot]==True:
+                        print(f'this is {robot}')
+                        print(f'len path is {len(self.robot_path[robot])}')
+                        print(f'initial len is {self.initial_len_path[robot]}')
+
+                        all_paths = []
+                        con_all_paths = []
+                        for robot in self.robots:
+                            a = []
+                            if self.robot_path[robot] is not None:
+                                l = len(self.robot_path[robot])
+                                for j in self.robot_path[robot]:
+                                    if l == 0:
+                                        a.append(CONV_POS_TO_NORMAL(self.robot_goal_only[robot][:2]))
+                                    else:
+                                        a.append(CONV_POS_TO_NORMAL(j[:2]))
+                            all_paths.append(a)
+                            
+                        all_head_to = []
+                        for robot in self.robots:
+                            a = []
+                            if self.robot_head_to[robot] is not None:
+                                l = len(self.robot_head_to[robot])
+                                for j in self.robot_head_to[robot]:
+                                    if l == 0:
+                                        a.append(CONV_POS_TO_NORMAL(self.robot_goal_only[robot][:2]))
+                                    else:
+                                        a.append(CONV_POS_TO_NORMAL(j[:2]))
+                            all_head_to.append(a)
+                            
+                        print(f'ALL_PATH:')
+                        for path in all_paths:
+                            print(path)
+                        # print(f'ALL_HEAD_TO:')
+                        # for path in all_head_to:
+                        #     print(path)
+                        print(f'88888888888888888')
+
+                        starts = []
+                        for robot in self.robots:
+                            if self.robot_path[robot] and len(self.robot_path[robot]) > 0:
+                                starts.append(self.robot_path[robot][0][:2])
+                            elif self.robot_goal_only[robot]:
+                                starts.append(self.robot_goal_only[robot][:2])
+                            # else:
+                            #     starts.append(self.robot_pose2d[robot][:2])  # Use current position if no path or goal
+
+                        # Similarly, update the goals line:
+                        goals = [(self.robot_goal_only[robot][:2]) if self.robot_goal_only[robot] else self.robot_pose2d[robot][:2] for robot in self.robots]
+
+                        # Then update the normal_start and normal_goals lines:
+                        normal_start = [CONV_POS_TO_NORMAL(start) for start in starts]
+                        normal_goals = [CONV_POS_TO_NORMAL(goal) for goal in goals]
+                        
+                        # print(f'starts: \n{starts}')
+                        # print(f'goal: \n{goals}')
+                        # print(f'starts_n: \n{normal_start}')
+                        # print(f'goal_n: \n{normal_goals}')
+                        print(f'99999999999999999')
+                        solution = PlannerControl().plan_paths_old(self.map, normal_start, normal_goals)
+                        print(f'replan: \n{solution[0]}')
 
                 if len(self.robot_path[robot]) == 0:
-                    self.robot_path[robot] = None
+                    self.robot_path[robot] = []
                     self.robot_time[robot]['end'] = time.time()
                     self.robot_time[robot]['duration'] = self.robot_time[robot]['end'] - self.robot_time[robot]['start']
                     self.robot_is_moving[robot] = 0
@@ -103,7 +206,7 @@ class PathFollowing(Node):
         if all_completed and not self.all_robots_completed:
             if all(robot['duration'] is not None for robot in self.robot_time.values()):
                 self.all_robots_completed = True
-                self.log_total_time()
+                self.log_total_time()        
 
     def calculate_cmd_vel(self, robot):
         if self.robot_cur_goal[robot] is None or self.robot_path[robot] is None or len(self.robot_path[robot]) == 0:
@@ -123,7 +226,13 @@ class PathFollowing(Node):
             repeats = next_non_repeat_index
 
             
+            
             if repeats > 1:
+                
+                # stop_time = 
+                
+                # self.can_replan[robot] = False
+                self.curr_repeat_node[robot] = self.robot_path[robot][0]
                 if self.robot_wait_start[robot] is None:
                     self.robot_wait_start[robot] = time.time()
                 
@@ -132,20 +241,37 @@ class PathFollowing(Node):
                 #     return self.stop()
                 
                 if next_non_repeat_index < len(self.robot_path[robot]):
-                        next_goal = np.array(self.robot_path[robot][next_non_repeat_index][:2])
-                        a = next_goal - curr_p
-                        rot_goal = np.arctan2(a[1], a[0])
-                        robot_angle = np.radians(self.robot_pose2d[robot][2])
-                        angle_diff = self.normalize_angle(rot_goal - robot_angle)
+                        next_non_repeat_goal = np.array(self.robot_path[robot][next_non_repeat_index][:2])
+                        next_2_step_node = np.array(self.robot_path[robot][2][:2])
+                        curr_node = np.array(self.robot_path[robot][0][:2]) #repeat node
                         
-                        if abs(angle_diff) > np.radians(5):  # If we need to rotate more than 5 degrees
-                            if angle_diff > 0:
-                                return self.rotate_left()
-                            else:
-                                return self.rotate_right()
-                        # else: 
-                        #     # if time.time() - self.robot_wait_start[robot] < 1.0:
-                        #     return self.stop()
+                        if np.array_equal(next_2_step_node, curr_node):
+                            if time.time() - self.robot_wait_start[robot] < repeats - 0.07:
+                                return self.stop()
+                            else: 
+                                self.robot_goals_reached[robot] = True
+
+                        else:
+                            di = next_2_step_node - curr_node
+                            # print(f'next_2_step : {next_2_step_node}, curr: {curr_node}, di: {di}')
+                            # a = next_non_repeat_goal - curr_p # to non repeat goal
+                            a = next_2_step_node - curr_p # to non repeat goal
+                            
+                            rot_goal = np.arctan2(a[1], a[0])
+                            robot_angle = np.radians(self.robot_pose2d[robot][2])
+                            angle_diff = self.normalize_angle(rot_goal - robot_angle)
+                            
+                            if abs(angle_diff) > np.radians(7):  # for robot faster facing direc
+                                if angle_diff > 0:
+                                    return self.rotate_left()
+                                else:
+                                    return self.rotate_right()
+                            else: 
+                                self.robot_goals_reached[robot] = True
+                                
+                                
+                            #     # if time.time() - self.robot_wait_start[robot] < 1.0:
+                            #     return self.stop()
                     
                 if time.time() - self.robot_wait_start[robot] < repeats - 0.07:
                     return self.stop()
@@ -169,10 +295,14 @@ class PathFollowing(Node):
                 #     if time.time() - self.robot_wait_start[robot] < repeats:
                 #         return self.stop()
             
+            else : 
+                self.robot_goals_reached[robot] = True
             self.robot_wait_start[robot] = None
-            self.robot_goals_reached[robot] = True
-            for _ in range(next_non_repeat_index - 1): 
-                self.robot_path[robot].pop(0)
+            # for i in range(next_non_repeat_index - 1): 
+            #     self.robot_path[robot].pop(0)
+            
+            # print(f'robot_wait: {self.robot_wait_time}')
+            
             return self.stop()
 
         a = current_goal - curr_p
@@ -187,7 +317,23 @@ class PathFollowing(Node):
         else:
             cmd_vel = self.rotate_right()
         
+        # closest_distance = self.get_closest_robot_distance(robot)
+        # if closest_distance < 3:  # 10 cm threshold
+        #     slowdown_factor = closest_distance * 0.1  # linear slowdown
+        #     cmd_vel.linear.x *= slowdown_factor
+        #     cmd_vel.angular.z *= slowdown_factor
+        
         return cmd_vel
+    
+    def get_closest_robot_distance(self, robot):
+        curr_pos = np.array(self.robot_pose2d[robot][:2])
+        distances = []
+        for other_robot, pose in self.robot_pose2d.items():
+            if other_robot != robot:
+                other_pos = np.array(pose[:2])
+                distance = np.linalg.norm(curr_pos - other_pos)
+                distances.append(distance)
+        return min(distances) if distances else float('inf')
 
     def check_wait_time(self, robot):
         if len(self.robot_path[robot]) < 2:
@@ -264,15 +410,20 @@ class PathFollowing(Node):
         
         robot_id = f'robot{tb_id}'
         self.robot_path[robot_id] = re_tb_path if re_tb_path else []
-        print(f'pathttt : ')
-        for i, j in self.robot_path.items():
-            print(f'{i}')
-            if j:  # Only iterate if j is not None and not empty
-                for k in j: 
-                    print(k)
+        self.initial_len_path[robot_id] = len(self.robot_path[robot_id])
+        # print(f'pathttt : ')
+        # for i, j in self.robot_path.items():
+        #     print(f'{i}')
+        #     if j:  # Only iterate if j is not None and not empty
+        #         for k in j: 
+        #             print(k)
         # print(f'path_to : ')
         # for i, j in self.robot_path.items():
         #     print(f'{i}, {j}')
+        
+        #get robot goal only
+        self.robot_goal_only[robot_id] = self.robot_path[robot_id][-1]
+        print(f'rob id only: {self.robot_goal_only}')
         
         # Set robot as moving when it receives a new path
         self.robot_is_moving[robot_id] = 1

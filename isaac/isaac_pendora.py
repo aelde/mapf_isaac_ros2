@@ -72,6 +72,8 @@ class Subscriber(Node):
         
         self.all_paths_count = 0
         
+        self.visual_cylinder_name = []
+        
         warehouse_path = "/home/eggs/obo_isaac_simulation/usd/pendora4.usd"
         warehouse_prim_path = "/World/pendora"
         stage_utils.add_reference_to_stage(usd_path=warehouse_path, prim_path=warehouse_prim_path)
@@ -104,7 +106,7 @@ class Subscriber(Node):
         tb_usd_path = [tb_usd_path_green, tb_usd_path_red, tb_usd_path_blue,tb_usd_path_sky,tb_yellow,tb_purple,tb_white,tb_black]
         start_pos = [j for i,j in ROBOT_START.items()]
         # print('start_pos :',start_pos)
-        
+        self.count = 0
         self.tb_job = [
             {
                 "id" : i,
@@ -230,6 +232,9 @@ class Subscriber(Node):
     #         )
         
     def tb_path_receive(self, msg):
+        if len(self.visual_cylinder_name) > 0:
+            self.ros_world.scene.remove_object(self.visual_cylinder_name[0])
+            self.visual_cylinder_name.pop(0)
         tb_id = msg.tb_id
         data = msg.listofpath.data
         dim0_size = msg.listofpath.layout.dim[0].size
@@ -246,14 +251,17 @@ class Subscriber(Node):
             
             # Check if the current point and next point are different
             if not (next_point[1] == current_point[1] and next_point[0] == current_point[0]):
+                self.count += 1
                 pos_rot = create_link_graph(next_point[1], next_point[0], current_point[1], current_point[0])
                 print(f'pos_rot: {pos_rot}')
                 
+                name = f'link_{tb_id}_{i+1}_{self.all_paths_count}_{self.count}'
+                self.visual_cylinder_name.append(name)
                 self.ros_world.scene.add(
                     VisualCylinder(
                         position=pos_rot["pos"],
                         prim_path=f'/World/Link_{tb_id}_{i+1}_{self.all_paths_count}',
-                        name=f'link_{tb_id}_{i+1}_{self.all_paths_count}',
+                        name=name,
                         orientation=pos_rot["rot"],
                         scale=np.array([0.1, 0.1, 3.0]),
                         color=self.tb_job[tb_id-1]["color"]
@@ -261,6 +269,7 @@ class Subscriber(Node):
                 )
                 
                 self.all_paths_count += 1
+                
             else:
                 print(f"Skipping VisualCylinder for identical consecutive points at index {i}")
     def run_simulation(self):
@@ -275,10 +284,12 @@ class Subscriber(Node):
                 if reset_needed:
                     self.ros_world.reset()
                     reset_needed = False
+
                 # the actual setting the cube pose is done here
                 for i in range(len(self.tb_job)):
                     pos, rot = self.ros_world.scene.get_object(self.tb_job[i]["name"]).get_world_pose()
                     self.pub_tb_pose2d(i+1,pos,rot)
+                    # self.ros_world.scene.remove_object()
                 print()
                 # self.ros_world.scene.get_object("cube_1").set_world_pose(self._cube_position)
 
